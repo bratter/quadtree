@@ -36,4 +36,12 @@ fn insert_out_of_bounds_doesnt_add_and_retrieve_out_of_bounds_yields_none() {
 
     assert_eq!(qt.size(), 1);
     assert_eq!(qt.retrieve(&pt2), None);
+
+    struct X;
+
+    impl PointX for X {
+        fn coords(&self) -> (f64, f64) {
+            (1.0, 1.0)
+        }
+    }
 }

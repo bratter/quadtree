@@ -7,19 +7,20 @@
 const DEFAULT_MAX_CHILDREN: usize = 4;
 const DEFAULT_MAX_DEPTH: u8 = 4;
 
-// TODO: Implement generics on data - point needs to borrow or box a generic
 // TODO: Hide the existence of points, and it shouldn't need clone
 //       May have to take a closure that accepts T and returns (x, y)
 //       Or just implement a GetCoords trait with fn get_coords on the type T
+//       Perhaps simply call the trait Point and have it return a struct or a tuple, tuple might be easier
+//       The inbounds is a "comes for free" fn with the tuple
 #[derive(Debug, Clone, PartialEq)]
-pub struct Point {
+pub struct Point<T> {
     x: f64,
     y: f64,
-    data: usize,
+    data: T,
 }
 
-impl Point {
-    pub fn new(x: f64, y: f64, data: usize) -> Self {
+impl <T> Point<T> {
+    pub fn new(x: f64, y: f64, data: T) -> Self {
         Self { x, y, data }
     }
 
@@ -30,6 +31,22 @@ impl Point {
         let y2 = y1 + bounds.height;
 
         let Point { x, y, .. } = *self;
+
+        x >= x1 && x <= x2 && y >= y1 && x <= y2
+    }
+}
+
+// TODO: This is a decent trait for Point
+pub trait PointX {
+    fn coords(&self) -> (f64, f64);
+
+    fn in_bounds(&self, bounds: &Bounds) -> bool {
+        let x1 = bounds.x;
+        let x2 = x1 + bounds.width;
+        let y1 = bounds.y;
+        let y2 = y1 + bounds.height;
+
+        let (x, y) = self.coords();
 
         x >= x1 && x <= x2 && y >= y1 && x <= y2
     }
@@ -52,15 +69,15 @@ impl Bounds {
 #[derive(Debug)]
 // Here we maintain a count for size
 // Could also calculate this each time, but it only saves usize memory
-pub struct QuadTree {
-    root: Node,
+pub struct QuadTree<T> {
+    root: Node<T>,
     size: usize,
 }
 
 // TODO: When generalizing behavior...
 // Out of bounds insertion and retrieval behavior is up to the specific
 // implementation, and could even panic if required
-impl QuadTree {
+impl <T> QuadTree<T> {
     /// Create a new Quadtree.
     pub fn new(bounds: Bounds, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
@@ -84,14 +101,14 @@ impl QuadTree {
     // TODO: Should we use Error semantics on insert? Rust requires errors to be handled
     // Here we assume that `root.insert` always succeeds so we can increment
     // count. This should work if the pt is in bounds
-    pub fn insert(&mut self, pt: Point) {
+    pub fn insert(&mut self, pt: Point<T>) {
         if pt.in_bounds(&self.root.bounds) {
             self.root.insert(pt);
             self.size += 1;
         }
     }
 
-    pub fn retrieve(&self, pt: &Point) -> Option<&Vec<Point>> {
+    pub fn retrieve(&self, pt: &Point<T>) -> Option<&Vec<Point<T>>> {
         // Bounds check first - capturing out of ounds here
         // This trusts the Node implementation to act correctly
         if pt.in_bounds(&self.root.bounds) {
@@ -103,7 +120,7 @@ impl QuadTree {
     }
 }
 
-impl std::fmt::Display for QuadTree {
+impl <T> std::fmt::Display for QuadTree<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Quadtree Root:")?;
         write!(f, "{}", self.root)
@@ -111,16 +128,16 @@ impl std::fmt::Display for QuadTree {
 }
 
 #[derive(Debug)]
-struct Node {
+struct Node<T> {
     bounds: Bounds,
     depth: u8,
     max_depth: u8,
     max_children: usize,
-    children: Vec<Point>,
-    nodes: Option<Box<[Node; 4]>>,
+    children: Vec<Point<T>>,
+    nodes: Option<Box<[Node<T>; 4]>>,
 }
 
-impl std::fmt::Display for Node {
+impl <T> std::fmt::Display for Node<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let indent = " ".repeat(self.depth as usize * 4);
         let count = self.children.len();
@@ -142,8 +159,8 @@ impl std::fmt::Display for Node {
     }
 }
 
-impl Node {
-    fn new (bounds: Bounds, depth: u8, max_depth: u8, max_children: usize) -> Node {
+impl <T> Node<T> {
+    fn new (bounds: Bounds, depth: u8, max_depth: u8, max_children: usize) -> Node<T> {
         Node {
             bounds,
             depth,
@@ -154,12 +171,12 @@ impl Node {
         }
     }
 
-    fn insert(&mut self, pt: Point) {
+    fn insert(&mut self, pt: Point<T>) {
         match self.nodes {
             // If we have sub-nodes already, pass down the tree
             // TODO: Want to grab the nodes array in the match
-            // But there appears to be no way to make it work without an error
-            // Leading to the ugly as_mut().unwrap()
+            //       But there appears to be no way to make it work without an error
+            //       Leading to the ugly as_mut().unwrap()
             Some(_) => {
                 let sub_node = self.find_sub_node(&pt);
                 self.nodes.as_mut().unwrap()[sub_node].insert(pt);
@@ -189,7 +206,7 @@ impl Node {
     }
 
     // Pulls all children within the node that would contain the passed point
-    fn retrieve(&self, pt: &Point) -> Option<&Vec<Point>> {
+    fn retrieve(&self, pt: &Point<T>) -> Option<&Vec<Point<T>>> {
         match &self.nodes {
             Some(nodes) => {
                 nodes[self.find_sub_node(pt)].retrieve(pt)
@@ -204,7 +221,7 @@ impl Node {
         }
     }
 
-    fn find_sub_node(&self, pt: &Point) -> usize {
+    fn find_sub_node(&self, pt: &Point<T>) -> usize {
         let b = &self.bounds;
         let left = pt.x <= b.x + b.width / 2.0;
         let top = pt.y <= b.y + b.height / 2.0;
