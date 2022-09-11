@@ -1,46 +1,37 @@
-#![allow(dead_code)]
 
-use std::fmt::Display;
-
-/**
- * Should this have both bounded and unbounded versions?
- * If yes, maybe do them as separate objects?
+/*
+ * TODO: Should this have both bounded and point versions?
+ * If yes, maybe do them as separate objects with a trait?
  */
 
 const MAX_CHILDREN: usize = 4;
 
-#[derive(Debug)]
-pub struct QuadTree {
-    root: Node,
-}
-
-impl QuadTree {
-    fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
-        QuadTree { root: Node::new(x, y, width, height, 0) }
-    }
-
-    fn insert(&mut self, pt: Point) {
-        self.root.insert(pt);
-    }
-
-    fn retrieve(&self, pt: &Point) {
-        self.root.retrieve(pt);
-    }
-}
-
-impl Display for QuadTree {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Quadtree Root:")?;
-        write!(f, "{}", self.root)
-    }
-}
-
 // TODO: Implement generics on data - point needs to borrow or box a generic
+// TODO: Hide the existence of points, and it shouldn't need clone
+//       May have to take a closure that accepts T and returns (x, y)
+//       Or just implement a GetCoords trait with fn get_coords on the type T
 #[derive(Debug, Clone, PartialEq)]
-struct Point {
+pub struct Point {
     x: f64,
     y: f64,
     data: usize,
+}
+
+impl Point {
+    pub fn new(x: f64, y: f64, data: usize) -> Self {
+        Self { x, y, data }
+    }
+
+    fn in_bounds(&self, bounds: &Bounds) -> bool {
+        let x1 = bounds.x;
+        let x2 = x1 + bounds.width;
+        let y1 = bounds.y;
+        let y2 = y1 + bounds.height;
+
+        let Point { x, y, .. } = *self;
+
+        x >= x1 && x <= x2 && y >= y1 && x <= y2
+    }
 }
 
 #[derive(Debug)]
@@ -49,6 +40,57 @@ struct Bounds {
     y: f64,
     width: f64,
     height: f64,
+}
+
+#[derive(Debug)]
+// Here we maintain a count for size
+// Could also calculate this each time, but it only saves usize memory
+pub struct QuadTree {
+    root: Node,
+    size: usize,
+}
+
+// Out of bounds insertion and retrieval behavior is up to the specific
+// implementation, however insertshould not panic
+impl QuadTree {
+    pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
+        QuadTree {
+            root: Node::new(x, y, width, height, 0),
+            size: 0
+        }
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    // TODO: Should we use Error semantics on insert? Rust requires errors to be handled
+    // Here we assume that `root.insert` always succeeds so we can increment
+    // count. This should work if the pt is in bounds
+    pub fn insert(&mut self, pt: Point) {
+        if pt.in_bounds(&self.root.bounds) {
+            self.root.insert(pt);
+            self.size += 1;
+        }
+    }
+
+    pub fn retrieve(&self, pt: &Point) -> Option<&Vec<Point>> {
+        // Bounds check first - capturing out of ounds here
+        // This trusts the Node implementation to act correctly
+        if pt.in_bounds(&self.root.bounds) {
+            self.root.retrieve(pt)
+        } else {
+            None
+        }
+
+    }
+}
+
+impl std::fmt::Display for QuadTree {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Quadtree Root:")?;
+        write!(f, "{}", self.root)
+    }
 }
 
 #[derive(Debug)]
@@ -125,13 +167,17 @@ impl Node {
     }
 
     // Pulls all children within the node that would contain the passed point
-    fn retrieve(&self, pt: &Point) -> &Vec<Point> {
+    fn retrieve(&self, pt: &Point) -> Option<&Vec<Point>> {
         match &self.nodes {
             Some(nodes) => {
-                &nodes[self.find_sub_node(pt)].retrieve(pt)
+                nodes[self.find_sub_node(pt)].retrieve(pt)
             },
             None => {
-                &self.children
+                if self.children.len() == 0 {
+                    None
+                } else {
+                    Some(&self.children)
+                }
             },
         }
     }
@@ -158,7 +204,7 @@ impl Node {
         let x2 = x1 + wh;
         let y2 = y1 + hh;
 
-        // TODO: Need clear way to represent the order.
+        // Fixed order of iteration tl, tr, br, bl
         self.nodes = Some(Box::new([
             Node::new(x1, y1, wh, hh, depth),
             Node::new(x1, y2, wh, hh, depth),
@@ -168,6 +214,7 @@ impl Node {
     }
 }
 
+// TODO: Update this test suite
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,7 +222,6 @@ mod tests {
     #[test]
     fn it_works() {
         let mut qt = QuadTree::new(0.0, 0.0, 1.0, 1.0);
-
         
         let pt1 = Point { x: 0.5, y: 0.5, data: 42 };
         let pt2 = Point { x: 0.3, y: 0.5, data: 42 };
