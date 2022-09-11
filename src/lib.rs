@@ -1,4 +1,3 @@
-
 /*
  * TODO: Should this have both bounded and point versions?
  * If yes, maybe do them as separate objects with a trait?
@@ -7,37 +6,7 @@
 const DEFAULT_MAX_CHILDREN: usize = 4;
 const DEFAULT_MAX_DEPTH: u8 = 4;
 
-// TODO: Hide the existence of points, and it shouldn't need clone
-//       May have to take a closure that accepts T and returns (x, y)
-//       Or just implement a GetCoords trait with fn get_coords on the type T
-//       Perhaps simply call the trait Point and have it return a struct or a tuple, tuple might be easier
-//       The inbounds is a "comes for free" fn with the tuple
-#[derive(Debug, Clone, PartialEq)]
-pub struct Point<T> {
-    x: f64,
-    y: f64,
-    data: T,
-}
-
-impl <T> Point<T> {
-    pub fn new(x: f64, y: f64, data: T) -> Self {
-        Self { x, y, data }
-    }
-
-    fn in_bounds(&self, bounds: &Bounds) -> bool {
-        let x1 = bounds.x;
-        let x2 = x1 + bounds.width;
-        let y1 = bounds.y;
-        let y2 = y1 + bounds.height;
-
-        let Point { x, y, .. } = *self;
-
-        x >= x1 && x <= x2 && y >= y1 && x <= y2
-    }
-}
-
-// TODO: This is a decent trait for Point
-pub trait PointX {
+pub trait Point {
     fn coords(&self) -> (f64, f64);
 
     fn in_bounds(&self, bounds: &Bounds) -> bool {
@@ -77,7 +46,7 @@ pub struct QuadTree<T> {
 // TODO: When generalizing behavior...
 // Out of bounds insertion and retrieval behavior is up to the specific
 // implementation, and could even panic if required
-impl <T> QuadTree<T> {
+impl <T: Point> QuadTree<T> {
     /// Create a new Quadtree.
     pub fn new(bounds: Bounds, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
@@ -101,14 +70,14 @@ impl <T> QuadTree<T> {
     // TODO: Should we use Error semantics on insert? Rust requires errors to be handled
     // Here we assume that `root.insert` always succeeds so we can increment
     // count. This should work if the pt is in bounds
-    pub fn insert(&mut self, pt: Point<T>) {
+    pub fn insert(&mut self, pt: T) {
         if pt.in_bounds(&self.root.bounds) {
             self.root.insert(pt);
             self.size += 1;
         }
     }
 
-    pub fn retrieve(&self, pt: &Point<T>) -> Option<&Vec<Point<T>>> {
+    pub fn retrieve(&self, pt: &T) -> Option<&Vec<T>> {
         // Bounds check first - capturing out of ounds here
         // This trusts the Node implementation to act correctly
         if pt.in_bounds(&self.root.bounds) {
@@ -133,7 +102,7 @@ struct Node<T> {
     depth: u8,
     max_depth: u8,
     max_children: usize,
-    children: Vec<Point<T>>,
+    children: Vec<T>,
     nodes: Option<Box<[Node<T>; 4]>>,
 }
 
@@ -159,7 +128,7 @@ impl <T> std::fmt::Display for Node<T> {
     }
 }
 
-impl <T> Node<T> {
+impl <T: Point> Node<T> {
     fn new (bounds: Bounds, depth: u8, max_depth: u8, max_children: usize) -> Node<T> {
         Node {
             bounds,
@@ -171,7 +140,7 @@ impl <T> Node<T> {
         }
     }
 
-    fn insert(&mut self, pt: Point<T>) {
+    fn insert(&mut self, pt: T) {
         match self.nodes {
             // If we have sub-nodes already, pass down the tree
             // TODO: Want to grab the nodes array in the match
@@ -206,7 +175,7 @@ impl <T> Node<T> {
     }
 
     // Pulls all children within the node that would contain the passed point
-    fn retrieve(&self, pt: &Point<T>) -> Option<&Vec<Point<T>>> {
+    fn retrieve(&self, pt: &T) -> Option<&Vec<T>> {
         match &self.nodes {
             Some(nodes) => {
                 nodes[self.find_sub_node(pt)].retrieve(pt)
@@ -221,10 +190,11 @@ impl <T> Node<T> {
         }
     }
 
-    fn find_sub_node(&self, pt: &Point<T>) -> usize {
+    fn find_sub_node(&self, pt: &T) -> usize {
         let b = &self.bounds;
-        let left = pt.x <= b.x + b.width / 2.0;
-        let top = pt.y <= b.y + b.height / 2.0;
+        let (x, y) = pt.coords();
+        let left = x <= b.x + b.width / 2.0;
+        let top = y <= b.y + b.height / 2.0;
 
         if left && top { 0 }
         else if !left && top { 1 }
@@ -261,13 +231,22 @@ impl <T> Node<T> {
 mod tests {
     use super::*;
 
+    #[derive(Debug, Clone, PartialEq)]
+    struct Pt(f64, f64);
+
+    impl Point for Pt {
+        fn coords(&self) -> (f64, f64) {
+            (self.0, self.1)
+        }
+    }
+
     #[test]
     fn it_works() {
         let mut qt = QuadTree::new_def(Bounds::new(0.0, 0.0, 1.0, 1.0));
         
-        let pt1 = Point { x: 0.5, y: 0.5, data: 42 };
-        let pt2 = Point { x: 0.3, y: 0.5, data: 42 };
-        let pt3 = Point { x: 0.5, y: 0.3, data: 42 };
+        let pt1 = Pt(0.5, 0.5);
+        let pt2 = Pt(0.3, 0.5);
+        let pt3 = Pt(0.5, 0.3);
         
         qt.insert(pt1.clone());
         qt.insert(pt1.clone());
