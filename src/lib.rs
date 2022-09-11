@@ -4,7 +4,8 @@
  * If yes, maybe do them as separate objects with a trait?
  */
 
-const MAX_CHILDREN: usize = 4;
+const DEFAULT_MAX_CHILDREN: usize = 4;
+const DEFAULT_MAX_DEPTH: u8 = 4;
 
 // TODO: Implement generics on data - point needs to borrow or box a generic
 // TODO: Hide the existence of points, and it shouldn't need clone
@@ -34,12 +35,18 @@ impl Point {
     }
 }
 
-#[derive(Debug)]
-struct Bounds {
+#[derive(Debug, Clone)]
+pub struct Bounds {
     x: f64,
     y: f64,
     width: f64,
     height: f64,
+}
+
+impl Bounds {
+    pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
+        Self { x, y, width, height }
+    }
 }
 
 #[derive(Debug)]
@@ -50,14 +57,24 @@ pub struct QuadTree {
     size: usize,
 }
 
+// TODO: When generalizing behavior...
 // Out of bounds insertion and retrieval behavior is up to the specific
-// implementation, however insertshould not panic
+// implementation, and could even panic if required
 impl QuadTree {
-    pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
+    /// Create a new Quadtree.
+    pub fn new(bounds: Bounds, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
+        let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
+        let max_children = max_children.unwrap_or(DEFAULT_MAX_CHILDREN);
+
         QuadTree {
-            root: Node::new(x, y, width, height, 0),
-            size: 0
+            root: Node::new(bounds, 0, max_depth, max_children),
+            size: 0,
         }
+    }
+
+    /// Create a new QuadTree using default values for max_depth and max_children.
+    pub fn new_def(bounds: Bounds) -> Self {
+        QuadTree::new(bounds, None, None)
     }
 
     pub fn size(&self) -> usize {
@@ -97,6 +114,8 @@ impl std::fmt::Display for QuadTree {
 struct Node {
     bounds: Bounds,
     depth: u8,
+    max_depth: u8,
+    max_children: usize,
     children: Vec<Point>,
     nodes: Option<Box<[Node; 4]>>,
 }
@@ -124,12 +143,14 @@ impl std::fmt::Display for Node {
 }
 
 impl Node {
-    fn new (x: f64, y: f64, width: f64, height: f64, depth: u8) -> Node {
+    fn new (bounds: Bounds, depth: u8, max_depth: u8, max_children: usize) -> Node {
         Node {
-            bounds: Bounds { x, y, width, height },
+            bounds,
             depth,
+            max_depth,
+            max_children,
             children: Vec::new(),
-            nodes: None
+            nodes: None,
         }
     }
 
@@ -137,19 +158,16 @@ impl Node {
         match self.nodes {
             // If we have sub-nodes already, pass down the tree
             // TODO: Want to grab the nodes array in the match
-            // But there appears to be no way to make it wortk without an error
+            // But there appears to be no way to make it work without an error
             // Leading to the ugly as_mut().unwrap()
             Some(_) => {
                 let sub_node = self.find_sub_node(&pt);
                 self.nodes.as_mut().unwrap()[sub_node].insert(pt);
             },
-            // Otherwise add to this node when there is room left at this depth
-            // TODO: Implement some sort of max depth / max children logic other than the fixed value
-            None if self.children.len() < MAX_CHILDREN => {
-                self.children.push(pt);
-            }
-            // If not subdivide and push all children down
-            None => {
+            // If there is no room left, subdivide and push all children down
+            // Subdivision does not happen if we've exceeded the max depth,
+            // which takes priority over the children length
+            None if self.children.len() >= self.max_children && !(self.depth >= self.max_depth)  => {
                 self.subdivide();
 
                 // Replace the old children with a new empty vector
@@ -162,6 +180,10 @@ impl Node {
 
                 // Retry the insert the new point last to preserve ordering
                 self.insert(pt);
+            }
+            // Otherwise can simply push the point
+            None => {
+                self.children.push(pt);
             }
         }
     }
@@ -195,6 +217,8 @@ impl Node {
 
     fn subdivide(&mut self) {
         let depth = self.depth + 1;
+        let md = self.max_depth;
+        let mc = self.max_children;
         
         let wh = self.bounds.width / 2.0;
         let hh = self.bounds.height / 2.0;
@@ -206,22 +230,23 @@ impl Node {
 
         // Fixed order of iteration tl, tr, br, bl
         self.nodes = Some(Box::new([
-            Node::new(x1, y1, wh, hh, depth),
-            Node::new(x1, y2, wh, hh, depth),
-            Node::new(x2, y2, wh, hh, depth),
-            Node::new(x2, y1, wh, hh, depth),
+            Node::new(Bounds::new(x1, y1, wh, hh), depth, md, mc),
+            Node::new(Bounds::new(x1, y2, wh, hh), depth, md, mc),
+            Node::new(Bounds::new(x2, y2, wh, hh), depth, md, mc),
+            Node::new(Bounds::new(x2, y1, wh, hh), depth, md, mc),
         ]));
     }
 }
 
 // TODO: Update this test suite
+//       At least include testing max depth/size etc.
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn it_works() {
-        let mut qt = QuadTree::new(0.0, 0.0, 1.0, 1.0);
+        let mut qt = QuadTree::new_def(Bounds::new(0.0, 0.0, 1.0, 1.0));
         
         let pt1 = Point { x: 0.5, y: 0.5, data: 42 };
         let pt2 = Point { x: 0.3, y: 0.5, data: 42 };
