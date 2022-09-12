@@ -1,10 +1,20 @@
 /*
  * TODO: Should this have both bounded and point versions?
- * If yes, maybe do them as separate objects with a trait?
+ *       If yes, maybe do them as separate objects with a trait?
+ *       What about an integer-with-power-2-bounds
+ * 
+ * TODO: Find method, customizable finder function as a trait or closure
  */
 
 const DEFAULT_MAX_CHILDREN: usize = 4;
 const DEFAULT_MAX_DEPTH: u8 = 4;
+
+enum SubNode {
+    TopLeft = 0,
+    TopRight = 1,
+    BottomRight = 2,
+    BottomLeft = 3,
+}
 
 pub trait Point {
     fn coords(&self) -> (f64, f64);
@@ -83,7 +93,7 @@ impl <T: Point> QuadTree<T> {
     }
 
     pub fn retrieve(&self, pt: &T) -> Option<&Vec<T>> {
-        // Bounds check first - capturing out of ounds here
+        // Bounds check first - capturing out of bounds here
         // This trusts the Node implementation to act correctly
         if pt.in_bounds(&self.root.bounds) {
             self.root.retrieve(pt)
@@ -94,6 +104,64 @@ impl <T: Point> QuadTree<T> {
 
     pub fn iter(&self) -> QuadTreeIter<'_, T> {
         QuadTreeIter::new(&self.root)
+    }
+
+    /// Find the closest item in the quadtree to the passed point
+    pub fn find(&self, pt: T) -> Option<&T> {
+        // TODO: Implement find with a customizable distance calc
+
+        let mut stack = vec![&self.root];
+        let mut min_dist = f64::INFINITY;
+        let mut min_item: Option<&T> = None;
+
+        while let Some(node) = stack.pop() {
+            // First look at the current node and check if it should be
+            // processed - skip processing if the edge of the node is further
+            // than the current minDist
+            // TODO: Point to node distance trait method?
+            //       Which one to put this on? Challenge is that we need to unify the type of the bounding box and the type of the incoming points
+            //       The corners of a node have to be points and the edges lines/line segments
+            //       These have to be in the same coordinate system as the added points
+            //       Let's just start with the cartesian example to get it working
+            let (px, py) = pt.coords();
+            let (x1, y1) = (node.bounds.x, node.bounds.y);
+            let (x2, y2) = (x1 + node.bounds.width, y1 + node.bounds.height);
+
+            let x_cmp = if px < x1 { x1 } else if px > x2 { x2 } else { px };
+            let y_cmp = if py < y1 { y1 } else if py > y2 { y2 } else { py };
+
+            // TODO: Do this instead, with the appropriate bounding line in each if block
+            let d = if px < x1 { 4 }
+                else if px > x2 { 3 }
+                else if py < y1 { 2 }
+                else if py > y2 { 1 }
+                else { 0 };
+
+            // Also using squared distance here
+            // TODO: This is not the best generalized algorithm
+            //       Maybe there is a point to BB that can come for free, or maybe just have to find the closest line first
+            let d = (px - x_cmp).powi(2) + (py - y_cmp).powi(2);
+            if d >= min_dist { continue; }
+
+            // Loop through all the children of the current node, retaining
+            // only the currently closest child
+            for child in &node.children {
+                // TODO: pt to pt distance
+                //       Start with cartesian example for simplicity, then abstract
+                //       Using suqre distance to avoid sqrt calc
+                // TODO: Consider providing a d_squared in the trait that has an auto implementation that can be overridden
+                let (px, py) = pt.coords();
+                let (cx, cy) = child.coords();
+                let d = (px - cx).powi(2) + (py - cy).powi(2);
+
+                if d < min_dist {
+                    min_dist = d;
+                    min_item = Some(child);
+                }
+            }
+        }
+
+        min_item
     }
 }
 
@@ -211,12 +279,11 @@ impl <T: Point> Node<T> {
     fn insert(&mut self, pt: T) {
         match self.nodes {
             // If we have sub-nodes already, pass down the tree
-            // TODO: Want to grab the nodes array in the match
-            //       But there appears to be no way to make it work without an error
-            //       Leading to the ugly as_mut().unwrap()
             Some(_) => {
-                let sub_node = self.find_sub_node(&pt);
-                self.nodes.as_mut().unwrap()[sub_node].insert(pt);
+                let sub_node_idx = self.find_sub_node(&pt);
+                let sub_nodes = self.nodes.as_mut().unwrap();
+
+                sub_nodes[sub_node_idx as usize].insert(pt);
             },
             // If there is no room left, subdivide and push all children down
             // Subdivision does not happen if we've exceeded the max depth,
@@ -225,15 +292,12 @@ impl <T: Point> Node<T> {
                 self.subdivide();
 
                 // Replace the old children with a new empty vector
-                let children = std::mem::replace(&mut self.children, Vec::new());
+                // and push the new point on last to preserve ordering
+                let mut children = std::mem::replace(&mut self.children, Vec::new());
+                children.push(pt);
 
-                // Now we can consume the original children vector
-                for pt in children {
-                    self.insert(pt);
-                }
-
-                // Retry the insert the new point last to preserve ordering
-                self.insert(pt);
+                // Now consume the original children vector
+                for pt in children { self.insert(pt); }
             }
             // Otherwise can simply push the point
             None => {
@@ -246,7 +310,7 @@ impl <T: Point> Node<T> {
     fn retrieve(&self, pt: &T) -> Option<&Vec<T>> {
         match &self.nodes {
             Some(nodes) => {
-                nodes[self.find_sub_node(pt)].retrieve(pt)
+                nodes[self.find_sub_node(pt) as usize].retrieve(pt)
             },
             None => {
                 if self.children.len() == 0 {
@@ -258,16 +322,16 @@ impl <T: Point> Node<T> {
         }
     }
 
-    fn find_sub_node(&self, pt: &T) -> usize {
+    fn find_sub_node(&self, pt: &T) -> SubNode {
         let b = &self.bounds;
         let (x, y) = pt.coords();
         let left = x <= b.x + b.width / 2.0;
         let top = y <= b.y + b.height / 2.0;
 
-        if left && top { 0 }
-        else if !left && top { 1 }
-        else if left && !top { 3 }
-        else { 2 }
+        if left && top { SubNode::TopLeft }
+        else if !left && top { SubNode::TopRight }
+        else if left && !top { SubNode::BottomLeft }
+        else { SubNode::BottomRight }
     }
 
     fn subdivide(&mut self) {
