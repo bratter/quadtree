@@ -47,8 +47,8 @@ pub struct QuadTree<T> {
 // Out of bounds insertion and retrieval behavior is up to the specific
 // implementation, and could even panic if required
 impl <T: Point> QuadTree<T> {
-    /// Create a new Quadtree.
-    pub fn new(bounds: Bounds, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
+    // Private constructor
+    fn private_new(bounds: Bounds, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
         let max_children = max_children.unwrap_or(DEFAULT_MAX_CHILDREN);
 
@@ -58,9 +58,14 @@ impl <T: Point> QuadTree<T> {
         }
     }
 
+    /// Create a new Quadtree.
+    pub fn new(bounds: Bounds, max_depth: u8, max_children: usize) -> Self {
+        QuadTree::private_new(bounds, Some(max_depth), Some(max_children))
+    }
+
     /// Create a new QuadTree using default values for max_depth and max_children.
     pub fn new_def(bounds: Bounds) -> Self {
-        QuadTree::new(bounds, None, None)
+        QuadTree::private_new(bounds, None, None)
     }
 
     pub fn size(&self) -> usize {
@@ -85,7 +90,10 @@ impl <T: Point> QuadTree<T> {
         } else {
             None
         }
+    }
 
+    pub fn iter(&self) -> QuadTreeIter<'_, T> {
+        QuadTreeIter::new(&self.root)
     }
 }
 
@@ -93,6 +101,66 @@ impl <T> std::fmt::Display for QuadTree<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Quadtree Root:")?;
         write!(f, "{}", self.root)
+    }
+}
+
+impl <'a, T: Point> IntoIterator for &'a QuadTree<T> {
+    type Item = &'a T;
+    type IntoIter = QuadTreeIter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+pub struct QuadTreeIter<'a, T> {
+    stack: Vec<&'a Node<T>>,
+    child_iter: Option<std::slice::Iter<'a, T>>,
+}
+
+impl <'a, T> QuadTreeIter<'a, T> {
+    fn new(root: &'a Node<T>) -> Self {
+        QuadTreeIter { stack: vec![root], child_iter: None }
+    }
+}
+
+impl <'a, T> Iterator for QuadTreeIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // If we are currently working through a child iterator,
+        // keep going if there are still results left
+        let next = self.child_iter.as_mut().and_then(|x| x.next());
+        if next.is_some() { return next; }
+
+        while !self.stack.is_empty() {
+            let cur_node = self.stack.pop()?;
+
+            match &cur_node.nodes {
+                Some(sub_nodes) => {
+                    // When we have sub-nodes, push onto the stack in reverse order
+                    for i in 0..4 {
+                        self.stack.push(&sub_nodes[3 - i]);
+                    }
+                    continue;
+                }
+                None => {
+                    // When there are no sub-nodes, grab an iterator for the children
+                    let mut child_iter = cur_node.children.iter();
+
+                    match child_iter.next() {
+                        Some(item) => {
+                            self.child_iter = Some(child_iter);
+                            return Some(item);
+                        }
+                        None => { continue; }
+                    }
+                }
+            }
+        }
+
+        // Finally return None if nothing left
+        None
     }
 }
 
@@ -225,13 +293,12 @@ impl <T: Point> Node<T> {
     }
 }
 
-// TODO: Update this test suite
-//       At least include testing max depth/size etc.
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[derive(Debug, Clone, PartialEq)]
+    // Making Pt Copy for this test
+    #[derive(Debug, Clone, Copy, PartialEq)]
     struct Pt(f64, f64);
 
     impl Point for Pt {
@@ -241,20 +308,70 @@ mod tests {
     }
 
     #[test]
-    fn it_works() {
+    fn subdivide_occurs_at_max_children() {
         let mut qt = QuadTree::new_def(Bounds::new(0.0, 0.0, 1.0, 1.0));
         
-        let pt1 = Pt(0.5, 0.5);
-        let pt2 = Pt(0.3, 0.5);
-        let pt3 = Pt(0.5, 0.3);
+        let pt1 = Pt(0.1, 0.1);
+        let pt2 = Pt(0.2, 0.2);
+        let pt3 = Pt(0.1, 0.8);
         
-        qt.insert(pt1.clone());
-        qt.insert(pt1.clone());
-        qt.insert(pt1.clone());
-        qt.insert(pt2.clone());
-        qt.insert(pt3.clone());
+        // Initially will be no sub-nodes, no children
+        let root = &qt.root;
+        assert_eq!(root.depth, 0);
+        assert_eq!(root.nodes.is_none(), true);
+        assert_eq!(root.children.len(), 0);
 
-        println!("{}", qt);
-        println!("{:?}", qt.retrieve(&pt1));
+        qt.insert(pt1);
+        qt.insert(pt1);
+        qt.insert(pt2);
+        qt.insert(pt3);
+        
+        // Insert four points, still no sub-nodes, but now four children
+        let root = &qt.root;
+        assert_eq!(root.nodes.is_none(), true);
+        assert_eq!(root.children.len(), 4);
+
+        qt.insert(pt2);
+
+        // Fifth point, now subdivided, with four in the first sub-node
+        let root = &qt.root;
+        let nodes = root.nodes.as_ref().unwrap();
+        let n0 = &nodes[0];
+        assert_eq!(root.children.len(), 0);
+        assert_eq!(nodes.len(), 4);
+
+        // n0 takes 4 children
+        assert_eq!(n0.depth, 1);
+        assert_eq!(n0.nodes.is_none(), true);
+        assert_eq!(n0.children.len(), 4);
+
+        // n3 takes 1 child and the others are empty
+        assert_eq!(nodes[1].children.len(), 0);
+        assert_eq!(nodes[2].children.len(), 0);
+        assert_eq!(nodes[3].children.len(), 1);
+    }
+
+    #[test]
+    fn can_change_max_depth_and_max_children_and_subdivide_stops_at_max_depth() {
+        let mut qt = QuadTree::new(
+            Bounds::new(0.0, 0.0, 1.0, 1.0),
+            2,
+            2,
+        );
+
+        let pt1 = Pt(0.1, 0.1);
+        
+        qt.insert(pt1);
+        qt.insert(pt1);
+        qt.insert(pt1);
+        
+        // All points the same value should immediately max out the depth
+        // With the value putting them all in the top left
+        let node = &qt.root
+            .nodes.as_ref().unwrap()[0]
+            .nodes.as_ref().unwrap()[0];
+        assert_eq!(qt.size(), 3);
+        assert_eq!(node.depth, 2);
+        assert_eq!(node.children.len(), 3);
     }
 }
