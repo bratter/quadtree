@@ -4,7 +4,10 @@
  *       What about an integer-with-power-2-bounds
  * 
  * TODO: Find method, customizable finder function as a trait or closure
+ * TODO: How do we best deal with a bounding box
  */
+
+ mod ptld;
 
 const DEFAULT_MAX_CHILDREN: usize = 4;
 const DEFAULT_MAX_DEPTH: u8 = 4;
@@ -109,7 +112,10 @@ impl <T: Point> QuadTree<T> {
     /// Find the closest item in the quadtree to the passed point
     pub fn find(&self, pt: T) -> Option<&T> {
         // TODO: Implement find with a customizable distance calc
-
+        //       Need to be able to measure distance to a variety of comparators, but also need to manage the node bounds tests
+        //       Node bounds are just line segments, so perhaps can implement distance for a double tuple, or a BoundsEdge or something
+        //       Finally, need to be able to plug in different distance measures - what is the easiest way?
+        //       Maybe just force implement Distance in your type for quadtree::geom::Point and quadtree::geom::LineSegment
         let mut stack = vec![&self.root];
         let mut min_dist = f64::INFINITY;
         let mut min_item: Option<&T> = None;
@@ -131,7 +137,7 @@ impl <T: Point> QuadTree<T> {
             let y_cmp = if py < y1 { y1 } else if py > y2 { y2 } else { py };
 
             // TODO: Do this instead, with the appropriate bounding line in each if block
-            let d = if px < x1 { 4 }
+            let _d = if px < x1 { 4 }
                 else if px > x2 { 3 }
                 else if py < y1 { 2 }
                 else if py > y2 { 1 }
@@ -277,13 +283,19 @@ impl <T: Point> Node<T> {
     }
 
     fn insert(&mut self, pt: T) {
-        match self.nodes {
+        // Take ownership of the sub-nodes before matching to enable the insertion
+        // This, apparently, is a very common pattern
+        // Works here because we replace the nodes at the end, and the None branch
+        // is unaffected. Overall a more ergonomic solution than the alterantive
+        // `let sub_nodes = self.nodes.as_mut().unwrap()`
+        match self.nodes.take() {
             // If we have sub-nodes already, pass down the tree
-            Some(_) => {
+            Some(mut sub_nodes) => {
                 let sub_node_idx = self.find_sub_node(&pt);
-                let sub_nodes = self.nodes.as_mut().unwrap();
-
                 sub_nodes[sub_node_idx as usize].insert(pt);
+                
+                // Make sure to replace the nodes
+                self.nodes = Some(sub_nodes);
             },
             // If there is no room left, subdivide and push all children down
             // Subdivision does not happen if we've exceeded the max depth,
