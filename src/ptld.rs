@@ -1,23 +1,25 @@
 use crate::Point;
 
-// TODO: Haversine distance calcs
-//       1. degrees to radians formula: https://github.com/Turfjs/turf/blob/master/packages/turf-helpers/index.ts#L684
-//       2. haversine pt-pt distance: https://github.com/Turfjs/turf/blob/master/packages/turf-distance/index.ts
-//       3. haversine pt-line distance: https://github.com/Turfjs/turf/blob/master/packages/turf-point-to-line-distance/index.ts
-
 // TODO: Plan for abstraction
 //       1. Put the basic distance calcs as pure functions in geom::euclidean and geom::spherical modules
 //       2. QuadTree needs to be turned into a trait (eventually + with multiple implementations)
 //       3. Put Distance, etc. in a geom module
 //       4. Custom type needs to implement Distance for itself covering both point and line segments. Should they have their own types? 
 //       5. Do we need some sort of guard unit type for the coordinate system
-//       6. Bounds needs to be beefed up to product valid line segments
+//       6. Bounds needs to be beefed up to produce valid line segments
 //       7. Provide data wrappers to enable easy use of the traits
+
+// Bounds and the Point/Line constructs need to know what geom they are working in
+// This is the tricky thing - need to block other coord systems without making it clunky
+// Quadtree and Node probably shouldn't care - they don't use anything directly
+// Probably use a unit struct in the distance trait
+// Perhaps some way in a generic to make it such that both sides have to implement a Geom trait (or just the distance one) AND the generic has to be the same
+// Perhaps dynamic dispatch onto the right implementation?
 
 // Type alias for a point - this is easier in these calcs than requiring a Point
 type PT = (f64, f64);
 
-// TODO: This is a sratch pad function for Euclidean point to line-segment distance
+// TODO: This is a scratch pad function for Euclidean point to line-segment distance
 // This is just to get the math working, traits, generics, interface, etc. still tbd
 // Base version from this SO answer: https://stackoverflow.com/a/6853926
 pub fn line_dist(p: PT, p1: PT, p2: PT) -> f64 {
@@ -65,6 +67,11 @@ impl Point for Pt {
 }
 
 struct Ln((f64, f64), (f64, f64));
+
+enum Geo {
+    Euclid,
+    Sphere,
+}
 
 // TODO: Note the generic traits allowing Distance to be implemented on different types
 //       To use the trait as a constraint, do need to specify the A though
