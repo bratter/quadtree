@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+// TODO: Possible to simplfy the generics?
 pub mod euclidean;
 pub mod spherical;
 
@@ -33,7 +34,7 @@ impl <Geom: System<Geometry = Geom>> Segment<Geom> {
     }
 }
 
-pub trait System {
+pub trait System: core::fmt::Debug + Clone + Copy + PartialEq {
     type Geometry;
 
     fn point(x: f64, y: f64) -> Point<Self::Geometry> {
@@ -86,11 +87,23 @@ impl <Geom: System<Geometry = Geom>> Bounds<Geom> {
 
     pub fn points(&self) -> [Point<Geom>; 4] {
         let (x, y) = self.origin.as_tuple();
+
         [
             Point::new(x, y),
             Point::new(x + self.width, y),
             Point::new(x + self.width, y + self.height),
             Point::new(x, y + self.height),
+        ]
+    }
+
+    pub fn segments(&self) -> [Segment<Geom>; 4] {
+        let [tl, tr, br, bl] = self.points();
+
+        [
+            Segment::new(tl, tr),
+            Segment::new(tr, br),
+            Segment::new(br, bl),
+            Segment::new(bl, tl),
         ]
     }
 }
@@ -125,6 +138,11 @@ mod tests {
         // This won't compile because the types don't match
         // let sp = Point::<Spherical>::new(0.0, 0.0);
         // assert_eq!(p1.dist(&sp), 0.0);
+
+        // Also testing the PartialEq
+        let segs = b1.segments();
+        assert_eq!(segs[0].a, Point::new(0.0, 0.0));
+        assert_eq!(segs[0].b, Point::new(1.0, 0.0));
     }
 
     #[test]

@@ -3,7 +3,7 @@ use super::*;
 /// Module containing Euclidean coordinate math
 pub mod math;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Euclidean;
 impl System for Euclidean {
     type Geometry = Euclidean;

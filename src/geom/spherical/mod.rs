@@ -1,4 +1,4 @@
-use self::math::deg_to_rad;
+use math::deg_to_rad;
 
 use super::*;
 
@@ -9,7 +9,7 @@ pub mod math;
 //       Accepting degrees is useful, because that's how lng/lat are usually noted
 //       Returning radians is useful because its easy to convert
 //       Would ideally be consistent, so starting with accepting radians, returning radians
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Spherical {}
 impl System for Spherical {
     type Geometry = Spherical;
