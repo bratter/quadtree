@@ -27,7 +27,7 @@ pub fn rad_to_deg(rad: f64) -> f64 {
 /// https://github.com/Turfjs/turf/blob/master/packages/turf-distance/index.ts
 pub fn haversine(p1: Pt, p2: Pt) -> f64 {
     let d_lng = p2.0 - p1.0;
-    let d_lat = p2.1 - p1.0;
+    let d_lat = p2.1 - p1.1;
     let lat_p1 = p1.1;
     let lat_p2 = p2.1;
 

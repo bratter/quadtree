@@ -8,7 +8,6 @@
  */
 
 pub mod geom;
-mod ptld;
 
 const DEFAULT_MAX_CHILDREN: usize = 4;
 const DEFAULT_MAX_DEPTH: u8 = 4;
