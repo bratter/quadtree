@@ -11,9 +11,9 @@ pub struct Point<Geom> {
     geometry: PhantomData<Geom>,
 }
 
-impl <Geom: System<Geometry = Geom>> Point<Geom> {
+impl <Geom: System> Point<Geom> {
     fn new(x: f64, y: f64) -> Point<Geom> {
-        Geom::point(x, y)
+        Point { x, y, geometry: PhantomData }
     }
 
     fn as_tuple(&self) -> (f64, f64) {
@@ -28,9 +28,9 @@ pub struct Segment<Geom> {
     geometry: PhantomData<Geom>,
 }
 
-impl <Geom: System<Geometry = Geom>> Segment<Geom> {
+impl <Geom: System> Segment<Geom> {
     pub fn new(a: Point<Geom>, b: Point<Geom>) -> Segment<Geom> {
-        Geom::segment(a, b)
+        Segment { a, b, geometry: PhantomData }
     }
 }
 
@@ -67,7 +67,7 @@ pub struct Bounds<Geom> {
     height: f64,
 }
 
-impl <Geom: System<Geometry = Geom>> Bounds<Geom> {
+impl <Geom: System> Bounds<Geom> {
     pub fn new(origin: Point<Geom>, width: f64, height: f64) -> Bounds<Geom> {
         Self::from_origin(origin, width, height)
     }
@@ -105,6 +105,15 @@ impl <Geom: System<Geometry = Geom>> Bounds<Geom> {
             Segment::new(br, bl),
             Segment::new(bl, tl),
         ]
+    }
+
+    // TODO: Should this be a trait?
+    pub fn contains(&self, pt: Point<Geom>) -> bool {
+        let (x1, y1) = self.origin.as_tuple();
+        let (x2, y2) = (x1 + self.width, y1 + self.height);
+        let (x, y) = pt.as_tuple();
+
+        x >= x1 && x <= x2 && y >= y1 && x <= y2
     }
 }
 

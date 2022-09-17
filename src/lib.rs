@@ -19,32 +19,51 @@ enum SubNode {
     BottomLeft = 3,
 }
 
-pub trait Point {
-    fn coords(&self) -> (f64, f64);
+pub trait Datum {
+    fn point(&self) -> Point;
+}
 
-    fn in_bounds(&self, bounds: &Bounds) -> bool {
-        let x1 = bounds.x;
-        let x2 = x1 + bounds.width;
-        let y1 = bounds.y;
-        let y2 = y1 + bounds.height;
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Point {
+    x: f64,
+    y: f64,
+}
 
-        let (x, y) = self.coords();
+impl Point {
+    pub fn new(x: f64, y: f64) -> Point {
+        Point { x, y }
+    }
 
-        x >= x1 && x <= x2 && y >= y1 && x <= y2
+    pub fn as_tuple(&self) -> (f64, f64) {
+        (self.x, self.y)
+    }
+}
+
+// We turn a Point into a datum so it can be used in the qt directly
+impl Datum for Point {
+    fn point(&self) -> Point {
+        *self
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Bounds {
-    x: f64,
-    y: f64,
+    origin: Point,
     width: f64,
     height: f64,
 }
 
 impl Bounds {
-    pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
-        Self { x, y, width, height }
+    pub fn new(origin: Point, width: f64, height: f64) -> Self {
+        Self { origin, width, height }
+    }
+
+    pub fn contains(&self, pt: Point) -> bool {
+        let (x1, y1) = self.origin.as_tuple();
+        let (x2, y2) = (x1 + self.width, y1 + self.height);
+        let (x, y) = pt.as_tuple();
+
+        x >= x1 && x <= x2 && y >= y1 && x <= y2
     }
 }
 
@@ -59,7 +78,7 @@ pub struct QuadTree<T> {
 // TODO: When generalizing behavior...
 // Out of bounds insertion and retrieval behavior is up to the specific
 // implementation, and could even panic if required
-impl <T: Point> QuadTree<T> {
+impl <T: Datum> QuadTree<T> {
     // Private constructor
     fn private_new(bounds: Bounds, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
@@ -89,7 +108,7 @@ impl <T: Point> QuadTree<T> {
     // Here we assume that `root.insert` always succeeds so we can increment
     // count. This should work if the pt is in bounds
     pub fn insert(&mut self, pt: T) {
-        if pt.in_bounds(&self.root.bounds) {
+        if self.root.bounds.contains(pt.point()) {
             self.root.insert(pt);
             self.size += 1;
         }
@@ -98,7 +117,7 @@ impl <T: Point> QuadTree<T> {
     pub fn retrieve(&self, pt: &T) -> Option<&Vec<T>> {
         // Bounds check first - capturing out of bounds here
         // This trusts the Node implementation to act correctly
-        if pt.in_bounds(&self.root.bounds) {
+        if self.root.bounds.contains(pt.point()) {
             self.root.retrieve(pt)
         } else {
             None
@@ -129,8 +148,8 @@ impl <T: Point> QuadTree<T> {
             //       The corners of a node have to be points and the edges lines/line segments
             //       These have to be in the same coordinate system as the added points
             //       Let's just start with the cartesian example to get it working
-            let (px, py) = pt.coords();
-            let (x1, y1) = (node.bounds.x, node.bounds.y);
+            let (px, py) = pt.point().as_tuple();
+            let (x1, y1) = (node.bounds.origin.x, node.bounds.origin.y);
             let (x2, y2) = (x1 + node.bounds.width, y1 + node.bounds.height);
 
             let x_cmp = if px < x1 { x1 } else if px > x2 { x2 } else { px };
@@ -156,8 +175,8 @@ impl <T: Point> QuadTree<T> {
                 //       Start with cartesian example for simplicity, then abstract
                 //       Using suqre distance to avoid sqrt calc
                 // TODO: Consider providing a d_squared in the trait that has an auto implementation that can be overridden
-                let (px, py) = pt.coords();
-                let (cx, cy) = child.coords();
+                let (px, py) = pt.point().as_tuple();
+                let (cx, cy) = child.point().as_tuple();
                 let d = (px - cx).powi(2) + (py - cy).powi(2);
 
                 if d < min_dist {
@@ -178,7 +197,7 @@ impl <T> std::fmt::Display for QuadTree<T> {
     }
 }
 
-impl <'a, T: Point> IntoIterator for &'a QuadTree<T> {
+impl <'a, T: Datum> IntoIterator for &'a QuadTree<T> {
     type Item = &'a T;
     type IntoIter = QuadTreeIter<'a, T>;
 
@@ -260,7 +279,7 @@ impl <T> std::fmt::Display for Node<T> {
             format!(" {count} children")
         };
 
-        writeln!(f, "{indent}({:.2}, {:.2}):{children}", self.bounds.x, self.bounds.y)?;
+        writeln!(f, "{indent}({:.2}, {:.2}):{children}", self.bounds.origin.x, self.bounds.origin.y)?;
         if let Some(nodes) = &self.nodes {
             for node in nodes.iter() {
                 write!(f, "{node}")?;
@@ -270,7 +289,7 @@ impl <T> std::fmt::Display for Node<T> {
     }
 }
 
-impl <T: Point> Node<T> {
+impl <T: Datum> Node<T> {
     fn new (bounds: Bounds, depth: u8, max_depth: u8, max_children: usize) -> Node<T> {
         Node {
             bounds,
@@ -336,9 +355,9 @@ impl <T: Point> Node<T> {
 
     fn find_sub_node(&self, pt: &T) -> SubNode {
         let b = &self.bounds;
-        let (x, y) = pt.coords();
-        let left = x <= b.x + b.width / 2.0;
-        let top = y <= b.y + b.height / 2.0;
+        let (x, y) = pt.point().as_tuple();
+        let left = x <= b.origin.x + b.width / 2.0;
+        let top = y <= b.origin.y + b.height / 2.0;
 
         if left && top { SubNode::TopLeft }
         else if !left && top { SubNode::TopRight }
@@ -354,17 +373,17 @@ impl <T: Point> Node<T> {
         let wh = self.bounds.width / 2.0;
         let hh = self.bounds.height / 2.0;
         
-        let x1 = self.bounds.x;
-        let y1 = self.bounds.y;
+        let x1 = self.bounds.origin.x;
+        let y1 = self.bounds.origin.y;
         let x2 = x1 + wh;
         let y2 = y1 + hh;
 
         // Fixed order of iteration tl, tr, br, bl
         self.nodes = Some(Box::new([
-            Node::new(Bounds::new(x1, y1, wh, hh), depth, md, mc),
-            Node::new(Bounds::new(x1, y2, wh, hh), depth, md, mc),
-            Node::new(Bounds::new(x2, y2, wh, hh), depth, md, mc),
-            Node::new(Bounds::new(x2, y1, wh, hh), depth, md, mc),
+            Node::new(Bounds::new(Point::new(x1, y1), wh, hh), depth, md, mc),
+            Node::new(Bounds::new(Point::new(x2, y1), wh, hh), depth, md, mc),
+            Node::new(Bounds::new(Point::new(x2, y2), wh, hh), depth, md, mc),
+            Node::new(Bounds::new(Point::new(x1, y2), wh, hh), depth, md, mc),
         ]));
     }
 }
@@ -373,23 +392,25 @@ impl <T: Point> Node<T> {
 mod tests {
     use super::*;
 
-    // Making Pt Copy for this test
+    // We can use Point directly, or make our own wrapper
     #[derive(Debug, Clone, Copy, PartialEq)]
-    struct Pt(f64, f64);
+    struct MyData(f64, f64);
 
-    impl Point for Pt {
-        fn coords(&self) -> (f64, f64) {
-            (self.0, self.1)
+    impl Datum for MyData {
+        fn point(&self) -> Point {
+            Point { x: self.0, y: self.1 }
         }
     }
 
     #[test]
     fn subdivide_occurs_at_max_children() {
-        let mut qt = QuadTree::new_def(Bounds::new(0.0, 0.0, 1.0, 1.0));
+        let origin = Point::new(0.0, 0.0);
+        let mut qt = QuadTree::new_def(Bounds::new(origin, 1.0, 1.0));
         
-        let pt1 = Pt(0.1, 0.1);
-        let pt2 = Pt(0.2, 0.2);
-        let pt3 = Pt(0.1, 0.8);
+        // Using a data wrapper here
+        let pt1 = MyData(0.1, 0.1);
+        let pt2 = MyData(0.2, 0.2);
+        let pt3 = MyData(0.1, 0.8);
         
         // Initially will be no sub-nodes, no children
         let root = &qt.root;
@@ -429,13 +450,14 @@ mod tests {
 
     #[test]
     fn can_change_max_depth_and_max_children_and_subdivide_stops_at_max_depth() {
+        let origin = Point::new(0.0, 0.0);
         let mut qt = QuadTree::new(
-            Bounds::new(0.0, 0.0, 1.0, 1.0),
+            Bounds::new(origin, 1.0, 1.0),
             2,
             2,
         );
 
-        let pt1 = Pt(0.1, 0.1);
+        let pt1 = MyData(0.1, 0.1);
         
         qt.insert(pt1);
         qt.insert(pt1);
