@@ -1,8 +1,9 @@
 use quadtree::*;
+use quadtree::geom::*;
 
 #[test]
 fn create_empty_retrieve_inside_bounds_returns_empty_vec() {
-    let origin = Point::new(0.0, 0.0);
+    let origin = Point::<Euclidean>::new(0.0, 0.0);
     let bounds = Bounds::new(origin, 1.0, 1.0);
     let qt = QuadTree::new_def(bounds);
     let pt1 = Point::new(0.1, 0.1);
@@ -13,7 +14,7 @@ fn create_empty_retrieve_inside_bounds_returns_empty_vec() {
 
 #[test]
 fn create_and_retrieve_single_point_returns_vec_of_point() {
-    let origin = Point::new(0.0, 0.0);
+    let origin = Point::<Euclidean>::new(0.0, 0.0);
     let bounds = Bounds::new(origin, 1.0, 1.0);
     let mut qt = QuadTree::new_def(bounds);
     let pt1 = Point::new(0.1, 0.1);
@@ -26,7 +27,7 @@ fn create_and_retrieve_single_point_returns_vec_of_point() {
 
 #[test]
 fn insert_out_of_bounds_doesnt_add_and_retrieve_out_of_bounds_yields_none() {
-    let origin = Point::new(0.0, 0.0);
+    let origin = Point::<Euclidean>::new(0.0, 0.0);
     let bounds = Bounds::new(origin, 1.0, 1.0);
     let mut qt = QuadTree::new_def(bounds);
     let pt1 = Point::new(0.1, 0.1);
@@ -41,7 +42,7 @@ fn insert_out_of_bounds_doesnt_add_and_retrieve_out_of_bounds_yields_none() {
 
 #[test]
 fn iterator_runs_preorder() {
-    let origin = Point::new(0.0, 0.0);
+    let origin = Point::<Euclidean>::new(0.0, 0.0);
     let bounds = Bounds::new(origin, 1.0, 1.0);
     let mut qt = QuadTree::new_def(bounds);
     let pt1 = Point::new(0.1, 0.1);
@@ -62,7 +63,7 @@ fn iterator_runs_preorder() {
     // for pt in qt {}
 
     // Test right length and in preorder
-    let vec = qt.iter().collect::<Vec<&Point>>();
+    let vec = qt.iter().collect::<Vec<&Point<Euclidean>>>();
     assert_eq!(vec.len(), 6);
     assert_eq!(vec[0], &pt1);
     assert_eq!(vec[1], &pt1);
@@ -72,6 +73,6 @@ fn iterator_runs_preorder() {
     assert_eq!(vec[5], &pt3);
 
     // We can re-iterate as its non-consumptive
-    let vec = qt.iter().collect::<Vec<&Point>>();
+    let vec = qt.iter().collect::<Vec<&Point<Euclidean>>>();
     assert_eq!(vec.len(), 6);
 }

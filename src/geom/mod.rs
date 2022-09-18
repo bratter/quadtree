@@ -4,6 +4,11 @@ use std::marker::PhantomData;
 pub mod euclidean;
 pub mod spherical;
 
+// Re-export the coordinate system for easier access
+// Should be the only thing commonly used
+pub use euclidean::Euclidean;
+pub use spherical::Spherical;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point<Geom> {
     x: f64,
@@ -12,11 +17,11 @@ pub struct Point<Geom> {
 }
 
 impl <Geom: System> Point<Geom> {
-    fn new(x: f64, y: f64) -> Point<Geom> {
+    pub fn new(x: f64, y: f64) -> Point<Geom> {
         Point { x, y, geometry: PhantomData }
     }
 
-    fn as_tuple(&self) -> (f64, f64) {
+    pub fn as_tuple(&self) -> (f64, f64) {
         (self.x, self.y)
     }
 }
@@ -44,6 +49,18 @@ pub trait System: core::fmt::Debug + Clone + Copy + PartialEq {
     fn segment(a: Point<Self::Geometry>, b: Point<Self::Geometry>) -> Segment<Self::Geometry> {
         Segment { a, b, geometry: PhantomData }
     }
+
+    fn dist_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64;
+
+    fn dist_rel_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64 {
+        Self::dist_pt_pt(p1, p2)
+    }
+
+    fn dist_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64;
+
+    fn dist_rel_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
+        Self::dist_pt_line(pt, line)
+    }
 }
 
 /// Flexible trait to calculate the distance between two objects.
@@ -53,14 +70,45 @@ pub trait Distance<T> {
 
     /// Relative distance measure. Does not mean anything on its own, but the
     /// result will be correctly ordered relative to other calls to the same
-    /// function. Comes for free by default, but can be overridden with more
-    /// efficient implementations, e.g. euclideamn distance squared avoids an
-    /// expensive square root.
-    fn dist_rel(&self, cmp: &T) -> f64 {
-        self.dist(cmp)
+    /// function. Does not come for free as it becomes too dangerous, but
+    /// can be implemented simply by delegating to `self.dist()` when there is
+    /// not a more efficient implementation, e.g. euclidean distance squared
+    /// avoids an expensive square root.
+    fn dist_rel(&self, cmp: &T) -> f64;
+}
+
+impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Point<Geom> {
+    fn dist(&self, cmp: &Point<Geom>) -> f64 {
+        Geom::dist_pt_pt(self, cmp)
+    }
+
+    fn dist_rel(&self, cmp: &Point<Geom>) -> f64 {
+        Geom::dist_rel_pt_pt(self, cmp)
     }
 }
 
+impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Segment<Geom> {
+    fn dist(&self, cmp: &Point<Geom>) -> f64 {
+        Geom::dist_pt_line(cmp, self)
+    }
+
+    fn dist_rel(&self, cmp: &Point<Geom>) -> f64 {
+        Geom::dist_rel_pt_line(cmp, self)
+    }
+}
+
+impl <Geom: System<Geometry = Geom>> Distance<Segment<Geom>> for Point<Geom> {
+    fn dist(&self, cmp: &Segment<Geom>) -> f64 {
+        Geom::dist_pt_line(self, cmp)
+    }
+
+    fn dist_rel(&self, cmp: &Segment<Geom>) -> f64 {
+        Geom::dist_rel_pt_line(self, cmp)
+    }
+}
+
+// TODO: Make these private and provide accessors?
+#[derive(Debug)]
 pub struct Bounds<Geom> {
     origin: Point<Geom>,
     width: f64,
@@ -83,6 +131,30 @@ impl <Geom: System> Bounds<Geom> {
 
     pub fn from_origin(origin: Point<Geom>, width: f64, height: f64) -> Bounds<Geom> {
         Bounds { origin, width, height }
+    }
+
+    pub fn width(&self) -> f64 {
+        self.width
+    }
+
+    pub fn height(&self) -> f64 {
+        self.height
+    }
+
+    pub fn x_min(&self) -> f64 {
+        self.origin.x
+    }
+
+    pub fn y_min(&self) -> f64 {
+        self.origin.y
+    }
+
+    pub fn x_max(&self) -> f64 {
+        self.origin.x + self.width
+    }
+
+    pub fn y_max(&self) -> f64 {
+        self.origin.y + self.height
     }
 
     pub fn points(&self) -> [Point<Geom>; 4] {
@@ -114,6 +186,30 @@ impl <Geom: System> Bounds<Geom> {
         let (x, y) = pt.as_tuple();
 
         x >= x1 && x <= x2 && y >= y1 && x <= y2
+    }
+}
+
+impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Bounds<Geom> {
+    fn dist(&self, cmp: &Point<Geom>) -> f64 {
+        let (x, y) = cmp.as_tuple();
+        let [top, right, bottom, left] = self.segments();
+        
+        if x < self.x_min() { left.dist(cmp) }
+        else if x > self.x_max() { right.dist(cmp) }
+        else if y < self.y_min() { top.dist(cmp) }
+        else if y > self.y_max() { bottom.dist(cmp) }
+        else { 0.0 }
+    }
+
+    fn dist_rel(&self, cmp: &Point<Geom>) -> f64 {
+        let (x, y) = cmp.as_tuple();
+        let [top, right, bottom, left] = self.segments();
+        
+        if x < self.x_min() { left.dist_rel(cmp) }
+        else if x > self.x_max() { right.dist_rel(cmp) }
+        else if y < self.y_min() { top.dist_rel(cmp) }
+        else if y > self.y_max() { bottom.dist_rel(cmp) }
+        else { 0.0 }
     }
 }
 

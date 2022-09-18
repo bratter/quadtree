@@ -2,12 +2,11 @@
  * TODO: Should this have both bounded and point versions?
  *       If yes, maybe do them as separate objects with a trait?
  *       What about an integer-with-power-2-bounds
- * 
- * TODO: Find method, customizable finder function as a trait or closure
- * TODO: How do we best deal with a bounding box
  */
 
 pub mod geom;
+
+use geom::*;
 
 const DEFAULT_MAX_CHILDREN: usize = 4;
 const DEFAULT_MAX_DEPTH: u8 = 4;
@@ -19,68 +18,31 @@ enum SubNode {
     BottomLeft = 3,
 }
 
-pub trait Datum {
-    fn point(&self) -> Point;
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Point {
-    x: f64,
-    y: f64,
-}
-
-impl Point {
-    pub fn new(x: f64, y: f64) -> Point {
-        Point { x, y }
-    }
-
-    pub fn as_tuple(&self) -> (f64, f64) {
-        (self.x, self.y)
-    }
+pub trait Datum<Geom: System<Geometry = Geom>> {
+    fn point(&self) -> Point<Geom>;
 }
 
 // We turn a Point into a datum so it can be used in the qt directly
-impl Datum for Point {
-    fn point(&self) -> Point {
+impl <Geom: System<Geometry = Geom>> Datum<Geom> for Point<Geom> {
+    fn point(&self) -> Point<Geom> {
         *self
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Bounds {
-    origin: Point,
-    width: f64,
-    height: f64,
-}
-
-impl Bounds {
-    pub fn new(origin: Point, width: f64, height: f64) -> Self {
-        Self { origin, width, height }
-    }
-
-    pub fn contains(&self, pt: Point) -> bool {
-        let (x1, y1) = self.origin.as_tuple();
-        let (x2, y2) = (x1 + self.width, y1 + self.height);
-        let (x, y) = pt.as_tuple();
-
-        x >= x1 && x <= x2 && y >= y1 && x <= y2
     }
 }
 
 #[derive(Debug)]
 // Here we maintain a count for size
 // Could also calculate this each time, but it only saves usize memory
-pub struct QuadTree<T> {
-    root: Node<T>,
+pub struct QuadTree<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
+    root: Node<T, Geom>,
     size: usize,
 }
 
 // TODO: When generalizing behavior...
 // Out of bounds insertion and retrieval behavior is up to the specific
 // implementation, and could even panic if required
-impl <T: Datum> QuadTree<T> {
+impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> {
     // Private constructor
-    fn private_new(bounds: Bounds, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
+    fn private_new(bounds: Bounds<Geom>, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
         let max_children = max_children.unwrap_or(DEFAULT_MAX_CHILDREN);
 
@@ -91,12 +53,12 @@ impl <T: Datum> QuadTree<T> {
     }
 
     /// Create a new Quadtree.
-    pub fn new(bounds: Bounds, max_depth: u8, max_children: usize) -> Self {
+    pub fn new(bounds: Bounds<Geom>, max_depth: u8, max_children: usize) -> Self {
         QuadTree::private_new(bounds, Some(max_depth), Some(max_children))
     }
 
     /// Create a new QuadTree using default values for max_depth and max_children.
-    pub fn new_def(bounds: Bounds) -> Self {
+    pub fn new_def(bounds: Bounds<Geom>) -> Self {
         QuadTree::private_new(bounds, None, None)
     }
 
@@ -124,17 +86,13 @@ impl <T: Datum> QuadTree<T> {
         }
     }
 
-    pub fn iter(&self) -> QuadTreeIter<'_, T> {
+    pub fn iter(&self) -> QuadTreeIter<'_, T, Geom> {
         QuadTreeIter::new(&self.root)
     }
 
-    /// Find the closest item in the quadtree to the passed point
-    pub fn find(&self, pt: T) -> Option<&T> {
-        // TODO: Implement find with a customizable distance calc
-        //       Need to be able to measure distance to a variety of comparators, but also need to manage the node bounds tests
-        //       Node bounds are just line segments, so perhaps can implement distance for a double tuple, or a BoundsEdge or something
-        //       Finally, need to be able to plug in different distance measures - what is the easiest way?
-        //       Maybe just force implement Distance in your type for quadtree::geom::Point and quadtree::geom::LineSegment
+    // TODO: Should we pass a raw point here instead of a datum?
+    /// Find the closest item in the quadtree to the passed datum
+    pub fn find(&self, datum: T) -> Option<&T> {
         let mut stack = vec![&self.root];
         let mut min_dist = f64::INFINITY;
         let mut min_item: Option<&T> = None;
@@ -143,44 +101,15 @@ impl <T: Datum> QuadTree<T> {
             // First look at the current node and check if it should be
             // processed - skip processing if the edge of the node is further
             // than the current minDist
-            // TODO: Point to node distance trait method?
-            //       Which one to put this on? Challenge is that we need to unify the type of the bounding box and the type of the incoming points
-            //       The corners of a node have to be points and the edges lines/line segments
-            //       These have to be in the same coordinate system as the added points
-            //       Let's just start with the cartesian example to get it working
-            let (px, py) = pt.point().as_tuple();
-            let (x1, y1) = (node.bounds.origin.x, node.bounds.origin.y);
-            let (x2, y2) = (x1 + node.bounds.width, y1 + node.bounds.height);
-
-            let x_cmp = if px < x1 { x1 } else if px > x2 { x2 } else { px };
-            let y_cmp = if py < y1 { y1 } else if py > y2 { y2 } else { py };
-
-            // TODO: Do this instead, with the appropriate bounding line in each if block
-            let _d = if px < x1 { 4 }
-                else if px > x2 { 3 }
-                else if py < y1 { 2 }
-                else if py > y2 { 1 }
-                else { 0 };
-
-            // Also using squared distance here
-            // TODO: This is not the best generalized algorithm
-            //       Maybe there is a point to BB that can come for free, or maybe just have to find the closest line first
-            let d = (px - x_cmp).powi(2) + (py - y_cmp).powi(2);
-            if d >= min_dist { continue; }
+            let bounds_dist = node.bounds.dist_rel(&datum.point());
+            if bounds_dist >= min_dist { continue; }
 
             // Loop through all the children of the current node, retaining
             // only the currently closest child
             for child in &node.children {
-                // TODO: pt to pt distance
-                //       Start with cartesian example for simplicity, then abstract
-                //       Using suqre distance to avoid sqrt calc
-                // TODO: Consider providing a d_squared in the trait that has an auto implementation that can be overridden
-                let (px, py) = pt.point().as_tuple();
-                let (cx, cy) = child.point().as_tuple();
-                let d = (px - cx).powi(2) + (py - cy).powi(2);
-
-                if d < min_dist {
-                    min_dist = d;
+                let child_dist = child.point().dist_rel(&datum.point());
+                if child_dist < min_dist {
+                    min_dist = child_dist;
                     min_item = Some(child);
                 }
             }
@@ -190,34 +119,34 @@ impl <T: Datum> QuadTree<T> {
     }
 }
 
-impl <T> std::fmt::Display for QuadTree<T> {
+impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for QuadTree<T, Geom> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Quadtree Root:")?;
         write!(f, "{}", self.root)
     }
 }
 
-impl <'a, T: Datum> IntoIterator for &'a QuadTree<T> {
+impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a QuadTree<T, Geom> {
     type Item = &'a T;
-    type IntoIter = QuadTreeIter<'a, T>;
+    type IntoIter = QuadTreeIter<'a, T, Geom>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-pub struct QuadTreeIter<'a, T> {
-    stack: Vec<&'a Node<T>>,
+pub struct QuadTreeIter<'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> {
+    stack: Vec<&'a Node<T, Geom>>,
     child_iter: Option<std::slice::Iter<'a, T>>,
 }
 
-impl <'a, T> QuadTreeIter<'a, T> {
-    fn new(root: &'a Node<T>) -> Self {
+impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTreeIter<'a, T, Geom> {
+    fn new(root: &'a Node<T, Geom>) -> Self {
         QuadTreeIter { stack: vec![root], child_iter: None }
     }
 }
 
-impl <'a, T> Iterator for QuadTreeIter<'a, T> {
+impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> Iterator for QuadTreeIter<'a, T, Geom> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -258,16 +187,16 @@ impl <'a, T> Iterator for QuadTreeIter<'a, T> {
 }
 
 #[derive(Debug)]
-struct Node<T> {
-    bounds: Bounds,
+struct Node<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
+    bounds: Bounds<Geom>,
     depth: u8,
     max_depth: u8,
     max_children: usize,
     children: Vec<T>,
-    nodes: Option<Box<[Node<T>; 4]>>,
+    nodes: Option<Box<[Node<T, Geom>; 4]>>,
 }
 
-impl <T> std::fmt::Display for Node<T> {
+impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for Node<T, Geom> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let indent = " ".repeat(self.depth as usize * 4);
         let count = self.children.len();
@@ -279,7 +208,7 @@ impl <T> std::fmt::Display for Node<T> {
             format!(" {count} children")
         };
 
-        writeln!(f, "{indent}({:.2}, {:.2}):{children}", self.bounds.origin.x, self.bounds.origin.y)?;
+        writeln!(f, "{indent}({:.2}, {:.2}):{children}", self.bounds.x_min(), self.bounds.y_min())?;
         if let Some(nodes) = &self.nodes {
             for node in nodes.iter() {
                 write!(f, "{node}")?;
@@ -289,8 +218,8 @@ impl <T> std::fmt::Display for Node<T> {
     }
 }
 
-impl <T: Datum> Node<T> {
-    fn new (bounds: Bounds, depth: u8, max_depth: u8, max_children: usize) -> Node<T> {
+impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> {
+    fn new (bounds: Bounds<Geom>, depth: u8, max_depth: u8, max_children: usize) -> Node<T, Geom> {
         Node {
             bounds,
             depth,
@@ -354,10 +283,10 @@ impl <T: Datum> Node<T> {
     }
 
     fn find_sub_node(&self, pt: &T) -> SubNode {
-        let b = &self.bounds;
         let (x, y) = pt.point().as_tuple();
-        let left = x <= b.origin.x + b.width / 2.0;
-        let top = y <= b.origin.y + b.height / 2.0;
+        let b = &self.bounds;
+        let left = x <= b.x_min() + b.width() / 2.0;
+        let top = y <= b.y_min() + b.height() / 2.0;
 
         if left && top { SubNode::TopLeft }
         else if !left && top { SubNode::TopRight }
@@ -370,13 +299,11 @@ impl <T: Datum> Node<T> {
         let md = self.max_depth;
         let mc = self.max_children;
         
-        let wh = self.bounds.width / 2.0;
-        let hh = self.bounds.height / 2.0;
+        let wh = self.bounds.width() / 2.0;
+        let hh = self.bounds.height() / 2.0;
         
-        let x1 = self.bounds.origin.x;
-        let y1 = self.bounds.origin.y;
-        let x2 = x1 + wh;
-        let y2 = y1 + hh;
+        let (x1, y1) = (self.bounds.x_min(), self.bounds.y_min());
+        let (x2, y2) = (x1 + wh, y1 + hh);
 
         // Fixed order of iteration tl, tr, br, bl
         self.nodes = Some(Box::new([
@@ -396,9 +323,9 @@ mod tests {
     #[derive(Debug, Clone, Copy, PartialEq)]
     struct MyData(f64, f64);
 
-    impl Datum for MyData {
-        fn point(&self) -> Point {
-            Point { x: self.0, y: self.1 }
+    impl Datum<Euclidean> for MyData {
+        fn point(&self) -> Point<Euclidean> {
+            Point::new(self.0, self.1)
         }
     }
 

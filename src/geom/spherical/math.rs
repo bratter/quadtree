@@ -46,7 +46,7 @@ pub fn haversine(p1: Pt, p2: Pt) -> f64 {
 /// 
 /// Squared versions are not required as there is no final `.sqrt()` in the
 /// haversine formula.
-pub fn dist_to_pt(p: Pt, p1: Pt) -> f64 {
+pub fn dist_pt_pt(p: Pt, p1: Pt) -> f64 {
     haversine(p, p1)
 }
 
@@ -60,7 +60,7 @@ pub fn dist_to_pt(p: Pt, p1: Pt) -> f64 {
 /// haversine formula.
 /// 
 /// Adapted from: https://github.com/Turfjs/turf/blob/master/packages/turf-point-to-line-distance/index.ts
-pub fn dist_to_line_seg(p: Pt, p1: Pt, p2: Pt) -> f64 {
+pub fn dist_pt_line(p: Pt, p1: Pt, p2: Pt) -> f64 {
     // Projection logic is identical to the euclidean case,
     // but distance calc is different
     let (x, y) = p;

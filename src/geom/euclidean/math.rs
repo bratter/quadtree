@@ -5,7 +5,7 @@ type Pt = (f64, f64);
 /// Calculate the square of the distance between a point `p` and reference
 /// point `p1`. This version producing the square is provided to avoid an
 /// expensive `.sqrt()` operation when not required.
-pub fn dist_sq_to_pt(p: Pt, p1: Pt) -> f64 {
+pub fn dist_sq_pt_pt(p: Pt, p1: Pt) -> f64 {
     let (x, y) = p;
     let (x1, y1) = p1;
 
@@ -14,8 +14,8 @@ pub fn dist_sq_to_pt(p: Pt, p1: Pt) -> f64 {
 
 /// Calculate the distance between a point `p` and a second reference point
 /// `p1`.
-pub fn dist_to_pt(p: Pt, p1: Pt) -> f64 {
-    dist_sq_to_pt(p, p1).sqrt()
+pub fn dist_pt_pt(p: Pt, p1: Pt) -> f64 {
+    dist_sq_pt_pt(p, p1).sqrt()
 }
 
 /// Calculate the square of the distance between a point `p` and a line segment
@@ -24,7 +24,7 @@ pub fn dist_to_pt(p: Pt, p1: Pt) -> f64 {
 /// operation when not required.
 /// 
 /// Base version from https://stackoverflow.com/a/6853926
-pub fn dist_sq_to_line_seg(p: Pt, p1: Pt, p2: Pt) -> f64 {
+pub fn dist_sq_pt_line(p: Pt, p1: Pt, p2: Pt) -> f64 {
     let (x, y) = p;
     let (x1, y1) = p1;
     let (x2, y2) = p2;
@@ -54,6 +54,6 @@ pub fn dist_sq_to_line_seg(p: Pt, p1: Pt, p2: Pt) -> f64 {
 
 /// Calculate the distance between a point `p` and a line segment defined by
 /// its two endpoints `p1` and `p2`.
-pub fn dist_to_line_seg(p: Pt, p1: Pt, p2: Pt) -> f64 {
-    dist_sq_to_line_seg(p, p1, p2).sqrt()
+pub fn dist_pt_line(p: Pt, p1: Pt, p2: Pt) -> f64 {
+    dist_sq_pt_line(p, p1, p2).sqrt()
 }

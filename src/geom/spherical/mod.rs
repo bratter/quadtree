@@ -13,29 +13,19 @@ pub mod math;
 pub struct Spherical {}
 impl System for Spherical {
     type Geometry = Spherical;
+
+    fn dist_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64 {
+        math::dist_pt_pt(p1.as_tuple(), p2.as_tuple())
+    }
+
+    fn dist_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
+        math::dist_pt_line(pt.as_tuple(), line.a.as_tuple(), line.b.as_tuple())
+    }
 }
 
 impl Point<Spherical> {
     pub fn from_deg(lng: f64, lat: f64) -> Point<Spherical> {
         Self::new(deg_to_rad(lng), deg_to_rad(lat))
-    }
-}
-
-impl Distance<Point<Spherical>> for Point<Spherical> {
-    fn dist(&self, cmp: &Point<Spherical>) -> f64 {
-        math::dist_to_pt(self.as_tuple(), cmp.as_tuple())
-    }
-}
-
-impl Distance<Segment<Spherical>> for Point<Spherical> {
-    fn dist(&self, cmp: &Segment<Spherical>) -> f64 {
-        math::dist_to_line_seg(self.as_tuple(), cmp.a.as_tuple(), cmp.b.as_tuple())
-    }
-}
-
-impl Distance<Point<Spherical>> for Segment<Spherical> {
-    fn dist(&self, cmp: &Point<Spherical>) -> f64 {
-        cmp.dist(self)
     }
 }
 
@@ -71,6 +61,7 @@ mod tests {
 
         assert_eq!(p1.dist(&p2), PI);
         assert_eq!(p2.dist(&p1), PI);
+        assert_eq!(p2.dist(&p3), PI / 2.0);
         assert_eq!(p2.dist_rel(&p3), PI / 2.0);
 
         assert_eq!(p2.dist(&seg), 0.0);

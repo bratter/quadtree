@@ -7,43 +7,21 @@ pub mod math;
 pub struct Euclidean;
 impl System for Euclidean {
     type Geometry = Euclidean;
-}
 
-impl Distance<Point<Euclidean>> for Point<Euclidean> {
-    fn dist(&self, cmp: &Point<Euclidean>) -> f64 {
-        math::dist_to_pt(self.as_tuple(), cmp.as_tuple())
+    fn dist_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64 {
+        math::dist_pt_pt(p1.as_tuple(), p2.as_tuple())
     }
 
-    fn dist_rel(&self, cmp: &Point<Euclidean>) -> f64 {
-        math::dist_sq_to_pt(self.as_tuple(), cmp.as_tuple())
-    }
-}
-
-impl Distance<Segment<Euclidean>> for Point<Euclidean> {
-    fn dist(&self, cmp: &Segment<Euclidean>) -> f64 {
-        math::dist_to_line_seg(
-            self.as_tuple(),
-            cmp.a.as_tuple(),
-            cmp.b.as_tuple(),
-        )
+    fn dist_rel_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64 {
+        math::dist_sq_pt_pt(p1.as_tuple(), p2.as_tuple())
     }
 
-    fn dist_rel(&self, cmp: &Segment<Euclidean>) -> f64 {
-        math::dist_sq_to_line_seg(
-            self.as_tuple(),
-            cmp.a.as_tuple(),
-            cmp.b.as_tuple(),
-        )
-    }
-}
-
-impl Distance<Point<Euclidean>> for Segment<Euclidean> {
-    fn dist(&self, cmp: &Point<Euclidean>) -> f64 {
-        cmp.dist(self)
+    fn dist_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
+        math::dist_pt_line(pt.as_tuple(), line.a.as_tuple(), line.b.as_tuple())
     }
 
-    fn dist_rel(&self, cmp: &Point<Euclidean>) -> f64 {
-        cmp.dist(self)
+    fn dist_rel_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
+        math::dist_sq_pt_line(pt.as_tuple(), line.a.as_tuple(), line.b.as_tuple())
     }
 }
 
