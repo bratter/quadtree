@@ -90,7 +90,7 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for Bou
         };
 
         // Always add the stuck children
-        children.extend(self.stuck_children.iter());
+        children.extend(&self.stuck_children);
         children
     }
 }

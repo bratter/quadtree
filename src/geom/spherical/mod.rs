@@ -118,7 +118,6 @@ mod tests {
         assert_eq!(p1.dist(&p2), PI);
         assert_eq!(p2.dist(&p1), PI);
         assert_eq!(p2.dist(&p3), PI / 2.0);
-        assert_eq!(p2.dist_rel(&p3), PI / 2.0);
 
         assert_eq!(p2.dist(&seg), 0.0);
         assert_eq!(p1.dist(&seg), 0.0);

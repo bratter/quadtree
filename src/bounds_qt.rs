@@ -70,13 +70,13 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
 
         while let Some(node) = stack.pop() {
             // No need to check the children if the bounds are too far
-            let bounds_dist = node.bounds().dist_rel(cmp);
+            let bounds_dist = node.bounds().dist(cmp);
             if bounds_dist >= min_dist { continue; }
 
             // Loop through all the children of the current node, retaining
             // only the currently closest child, stuck or otherwise
-            for child in node.children.iter().chain(node.stuck_children.iter()) {
-                let child_dist = child.bounds().dist_rel(cmp);
+            for child in node.children.iter().chain(&node.stuck_children) {
+                let child_dist = child.bounds().dist(cmp);
                 if child_dist < min_dist {
                     min_dist = child_dist;
                     min_item = Some(child);

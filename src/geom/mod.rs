@@ -1,10 +1,8 @@
 use std::marker::PhantomData;
 
-// TODO: Turn any .iter() in for loops to &'s, and make the iter() an IntoIterator implementation, not just an iter method
 // TODO: Possible to simplfy the generics? Ref https://www.youtube.com/watch?v=yozQ9C69pNs, could remove the generic on System, but keep the associated type
 // TODO: Build some simple longitude math (do it on a wrapper type?) to make wrapping work
 // TODO: Test the bounds distances
-// TODO: Remove dist_rel
 pub mod euclidean;
 pub mod spherical;
 mod bounds;
@@ -80,22 +78,19 @@ pub trait Distance<T> {
     /// Calculate the distance between two items.
     fn dist(&self, cmp: &T) -> f64;
 
-    /// Relative distance measure. Does not mean anything on its own, but the
-    /// result will be correctly ordered relative to other calls to the same
-    /// function. Does not come for free as it becomes too dangerous, but
-    /// can be implemented simply by delegating to `self.dist()` when there is
-    /// not a more efficient implementation, e.g. euclidean distance squared
-    /// avoids an expensive square root.
-    fn dist_rel(&self, cmp: &T) -> f64;
+    // TODO: Consider re-introducing relative distances
+    // Relative distance measure. Does not mean anything on its own, but the
+    // result will be correctly ordered relative to other calls to the same
+    // function. Does not come for free as it becomes too dangerous, but
+    // can be implemented simply by delegating to `self.dist()` when there is
+    // not a more efficient implementation, e.g. euclidean distance squared
+    // avoids an expensive square root.
+    // fn dist_rel(&self, cmp: &T) -> f64;
 }
 
 impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Point<Geom> {
     fn dist(&self, cmp: &Point<Geom>) -> f64 {
         Geom::dist_pt_pt(self, cmp)
-    }
-
-    fn dist_rel(&self, cmp: &Point<Geom>) -> f64 {
-        Geom::dist_rel_pt_pt(self, cmp)
     }
 }
 
@@ -103,18 +98,10 @@ impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Segment<Geom> {
     fn dist(&self, cmp: &Point<Geom>) -> f64 {
         Geom::dist_pt_line(cmp, self)
     }
-
-    fn dist_rel(&self, cmp: &Point<Geom>) -> f64 {
-        Geom::dist_rel_pt_line(cmp, self)
-    }
 }
 
 impl <Geom: System<Geometry = Geom>> Distance<Segment<Geom>> for Point<Geom> {
     fn dist(&self, cmp: &Segment<Geom>) -> f64 {
         Geom::dist_pt_line(self, cmp)
-    }
-
-    fn dist_rel(&self, cmp: &Segment<Geom>) -> f64 {
-        Geom::dist_rel_pt_line(self, cmp)
     }
 }

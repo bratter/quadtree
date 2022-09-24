@@ -100,26 +100,11 @@ impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Bounds<Geom> {
         else if y > self.y_max() { bottom.dist(cmp) }
         else { 0.0 }
     }
-
-    fn dist_rel(&self, cmp: &Point<Geom>) -> f64 {
-        let (x, y) = cmp.as_tuple();
-        let [top, right, bottom, left] = self.segments();
-        
-        if x < self.x_min() { left.dist_rel(cmp) }
-        else if x > self.x_max() { right.dist_rel(cmp) }
-        else if y < self.y_min() { top.dist_rel(cmp) }
-        else if y > self.y_max() { bottom.dist_rel(cmp) }
-        else { 0.0 }
-    }
 }
 
 impl <Geom: System<Geometry = Geom>> Distance<Bounds<Geom>> for Bounds<Geom> {
     fn dist(&self, cmp: &Bounds<Geom>) -> f64 {
         Geom::dist_bounds_bounds(self, cmp)
-    }
-
-    fn dist_rel(&self, cmp: &Bounds<Geom>) -> f64 {
-        todo!()
     }
 }
 

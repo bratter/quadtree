@@ -130,13 +130,13 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for Point
             // First look at the current node and check if it should be
             // processed - skip processing if the edge of the node is further
             // than the current 
-            let bounds_dist = node.bounds().dist_rel(cmp);
+            let bounds_dist = node.bounds().dist(cmp);
             if bounds_dist >= min_dist { continue; }
 
             // Loop through all the children of the current node, retaining
             // only the currently closest child
             for child in &node.children {
-                let child_dist = child.point().dist_rel(cmp);
+                let child_dist = child.point().dist(cmp);
                 if child_dist < min_dist {
                     min_dist = child_dist;
                     min_item = Some(child);

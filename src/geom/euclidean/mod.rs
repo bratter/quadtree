@@ -73,7 +73,7 @@ mod tests {
     }
 
     #[test]
-    fn calculate_pt_pt_and_pt_segment_distance_and_rel() {
+    fn calculate_pt_pt_and_pt_segment_distance() {
         let p1 = Euclidean::point(0.0, 0.0);
         let p2 = Euclidean::point(3.0, 4.0);
         let p3 = Euclidean::point(3.0, 0.0);
@@ -81,7 +81,6 @@ mod tests {
         let seg = Euclidean::segment(p1, p3);
 
         assert_eq!(p1.dist(&p2), 5.0);
-        assert_eq!(p1.dist_rel(&p3), 9.0);
 
         assert_eq!(p1.dist(&seg), 0.0);
         assert_eq!(seg.dist(&p2), 4.0);

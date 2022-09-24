@@ -148,7 +148,7 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for Point
 
         writeln!(f, "{indent}({:.2}, {:.2}):{children}", self.bounds.x_min(), self.bounds.y_min())?;
         if let Some(nodes) = &self.nodes {
-            for node in nodes.iter() {
+            for node in &**nodes {
                 write!(f, "{node}")?;
             }
         };
