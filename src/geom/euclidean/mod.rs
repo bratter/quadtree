@@ -23,6 +23,35 @@ impl System for Euclidean {
     fn dist_rel_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
         math::dist_sq_pt_line(pt.as_tuple(), line.a.as_tuple(), line.b.as_tuple())
     }
+
+    fn dist_bounds_bounds(b1: &Bounds<Self::Geometry>, b2: &Bounds<Self::Geometry>) -> f64 {
+        let overlap_x = b1.x_max() >= b2.x_min() && b2.x_max() >= b1.y_min();
+        let overlap_y = b1.y_max() >= b2.y_min() && b2.y_max() >= b1.y_min();
+
+        match (overlap_x, overlap_y) {
+            // If there is any overlap, then the distance is zero
+            (true, true) => 0.0,
+            // When x overlaps, distance is the smallest y-difference,
+            // and similarly for y-overlaps
+            (true, false) => (b1.y_min() - b2.y_max()).min(b2.y_min() - b1.y_max()),
+            (false, true) => (b1.x_min() - b2.x_max()).min(b2.x_min() - b1.x_max()),
+            // When neither overlaps, take the distance from closest corners
+            (false, false) => {
+                let (x1, x2) = if b1.x_max() < b2.x_min() {
+                    (b1.x_max(), b2.x_min())
+                } else {
+                    (b1.x_min(), b2.x_max())
+                };
+                let (y1, y2) = if b1.y_max() < b2.y_min() {
+                    (b1.y_max(), b2.y_min())
+                } else {
+                    (b1.y_min(), b2.y_max())
+                };
+
+                math::dist_pt_pt((x1, y1), (x2, y2))
+            }
+        }
+    }
 }
 
 #[cfg(test)]

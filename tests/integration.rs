@@ -5,31 +5,31 @@ use quadtree::geom::*;
 fn create_empty_retrieve_inside_bounds_returns_empty_vec() {
     let origin = Point::<Euclidean>::new(0.0, 0.0);
     let bounds = Bounds::new(origin, 1.0, 1.0);
-    let qt = QuadTree::new_def(bounds);
+    let qt = PointQuadTree::new_def(bounds);
     let pt1 = Point::new(0.1, 0.1);
 
     assert_eq!(qt.size(), 0);
-    assert_eq!(qt.retrieve(&pt1), None);
+    assert_eq!(qt.retrieve(&pt1).len(), 0);
 }
 
 #[test]
 fn create_and_retrieve_single_point_returns_vec_of_point() {
     let origin = Point::<Euclidean>::new(0.0, 0.0);
     let bounds = Bounds::new(origin, 1.0, 1.0);
-    let mut qt = QuadTree::new_def(bounds);
+    let mut qt = PointQuadTree::new_def(bounds);
     let pt1 = Point::new(0.1, 0.1);
 
     qt.insert(pt1.clone());
 
     assert_eq!(qt.size(), 1);
-    assert_eq!(qt.retrieve(&pt1).unwrap(), &vec![pt1]);
+    assert_eq!(qt.retrieve(&pt1), vec![&pt1]);
 }
 
 #[test]
 fn insert_out_of_bounds_doesnt_add_and_retrieve_out_of_bounds_yields_none() {
     let origin = Point::<Euclidean>::new(0.0, 0.0);
     let bounds = Bounds::new(origin, 1.0, 1.0);
-    let mut qt = QuadTree::new_def(bounds);
+    let mut qt = PointQuadTree::new_def(bounds);
     let pt1 = Point::new(0.1, 0.1);
     let pt2 = Point::new(2.0, 2.0);
 
@@ -37,14 +37,14 @@ fn insert_out_of_bounds_doesnt_add_and_retrieve_out_of_bounds_yields_none() {
     qt.insert(pt2.clone());
 
     assert_eq!(qt.size(), 1);
-    assert_eq!(qt.retrieve(&pt2), None);
+    assert_eq!(qt.retrieve(&pt2).len(), 0);
 }
 
 #[test]
 fn iterator_runs_preorder() {
     let origin = Point::<Euclidean>::new(0.0, 0.0);
     let bounds = Bounds::new(origin, 1.0, 1.0);
-    let mut qt = QuadTree::new_def(bounds);
+    let mut qt = PointQuadTree::new_def(bounds);
     let pt1 = Point::new(0.1, 0.1);
     let pt2 = Point::new(0.2, 0.2);
     let pt3 = Point::new(0.1, 0.8);

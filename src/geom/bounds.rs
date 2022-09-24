@@ -71,13 +71,21 @@ impl <Geom: System> Bounds<Geom> {
         ]
     }
 
-    // TODO: Should this be a trait?
+    // TODO: Should this be a trait? Then can have multiple implementations - point, segment, bounds
     pub fn contains(&self, pt: Point<Geom>) -> bool {
         let (x1, y1) = self.origin.as_tuple();
         let (x2, y2) = (x1 + self.width, y1 + self.height);
         let (x, y) = pt.as_tuple();
 
         x >= x1 && x <= x2 && y >= y1 && x <= y2
+    }
+
+    /// Checks that the passed bounds is completely contained by this bounds.
+    pub fn contains_bounds(&self, bounds: Bounds<Geom>) -> bool {
+        bounds.x_min() >= self.x_min()
+        && bounds.x_max() <= self.x_max()
+        && bounds.y_min() >= self.y_min()
+        && bounds.y_max() <= self.y_max()
     }
 }
 
@@ -102,6 +110,16 @@ impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Bounds<Geom> {
         else if y < self.y_min() { top.dist_rel(cmp) }
         else if y > self.y_max() { bottom.dist_rel(cmp) }
         else { 0.0 }
+    }
+}
+
+impl <Geom: System<Geometry = Geom>> Distance<Bounds<Geom>> for Bounds<Geom> {
+    fn dist(&self, cmp: &Bounds<Geom>) -> f64 {
+        Geom::dist_bounds_bounds(self, cmp)
+    }
+
+    fn dist_rel(&self, cmp: &Bounds<Geom>) -> f64 {
+        todo!()
     }
 }
 

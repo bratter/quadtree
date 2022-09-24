@@ -2,7 +2,7 @@
 
 use super::*;
 
-impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a QuadTree<T, Geom> {
+impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a PointQuadTree<T, Geom> {
     type Item = &'a T;
     type IntoIter = QuadTreeIter<'a, T, Geom>;
 
@@ -11,12 +11,12 @@ impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a Qu
     }
 }
 pub struct QuadTreeIter<'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> {
-    stack: Vec<&'a Node<T, Geom>>,
+    stack: Vec<&'a PointNode<T, Geom>>,
     child_iter: Option<std::slice::Iter<'a, T>>,
 }
 
 impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTreeIter<'a, T, Geom> {
-    pub fn new(root: &'a Node<T, Geom>) -> Self {
+    pub fn new(root: &'a PointNode<T, Geom>) -> Self {
         QuadTreeIter { stack: vec![root], child_iter: None }
     }
 }

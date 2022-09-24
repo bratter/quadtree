@@ -1,6 +1,10 @@
 use std::marker::PhantomData;
 
-// TODO: Possible to simplfy the generics?
+// TODO: Turn any .iter() in for loops to &'s, and make the iter() an IntoIterator implementation, not just an iter method
+// TODO: Possible to simplfy the generics? Ref https://www.youtube.com/watch?v=yozQ9C69pNs, could remove the generic on System, but keep the associated type
+// TODO: Build some simple longitude math (do it on a wrapper type?) to make wrapping work
+// TODO: Test the bounds distances
+// TODO: Remove dist_rel
 pub mod euclidean;
 pub mod spherical;
 mod bounds;
@@ -44,6 +48,7 @@ impl <Geom: System> Segment<Geom> {
     }
 }
 
+// TODO: Delete all the relative distances to make it simpler
 pub trait System: core::fmt::Debug + Clone + Copy + PartialEq {
     type Geometry;
 
@@ -66,6 +71,8 @@ pub trait System: core::fmt::Debug + Clone + Copy + PartialEq {
     fn dist_rel_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
         Self::dist_pt_line(pt, line)
     }
+
+    fn dist_bounds_bounds(b1: &Bounds<Self::Geometry>, b2: &Bounds<Self::Geometry>) -> f64;
 }
 
 /// Flexible trait to calculate the distance between two objects.
