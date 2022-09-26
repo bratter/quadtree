@@ -2,6 +2,7 @@
  * TODO: Should this have both bounded and point versions?
  *       If yes, maybe do them as separate objects with a trait?
  *       What about an integer-with-power-2-bounds
+ * TODO: Use https://georust.org/ for geographic primitives instead
  */
 
 pub mod geom;

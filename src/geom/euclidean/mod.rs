@@ -12,20 +12,12 @@ impl System for Euclidean {
         math::dist_pt_pt(p1.as_tuple(), p2.as_tuple())
     }
 
-    fn dist_rel_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64 {
-        math::dist_sq_pt_pt(p1.as_tuple(), p2.as_tuple())
-    }
-
     fn dist_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
         math::dist_pt_line(pt.as_tuple(), line.a.as_tuple(), line.b.as_tuple())
     }
 
-    fn dist_rel_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
-        math::dist_sq_pt_line(pt.as_tuple(), line.a.as_tuple(), line.b.as_tuple())
-    }
-
     fn dist_bounds_bounds(b1: &Bounds<Self::Geometry>, b2: &Bounds<Self::Geometry>) -> f64 {
-        let overlap_x = b1.x_max() >= b2.x_min() && b2.x_max() >= b1.y_min();
+        let overlap_x = b1.x_max() >= b2.x_min() && b2.x_max() >= b1.x_min();
         let overlap_y = b1.y_max() >= b2.y_min() && b2.y_max() >= b1.y_min();
 
         match (overlap_x, overlap_y) {

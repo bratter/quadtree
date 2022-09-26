@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 // TODO: Possible to simplfy the generics? Ref https://www.youtube.com/watch?v=yozQ9C69pNs, could remove the generic on System, but keep the associated type
-// TODO: Build some simple longitude math (do it on a wrapper type?) to make wrapping work
-// TODO: Test the bounds distances
+// TODO: Rearrange the node/qt modules
+// TODO: Implement KNN
 pub mod euclidean;
 pub mod spherical;
 mod bounds;
@@ -46,7 +46,6 @@ impl <Geom: System> Segment<Geom> {
     }
 }
 
-// TODO: Delete all the relative distances to make it simpler
 pub trait System: core::fmt::Debug + Clone + Copy + PartialEq {
     type Geometry;
 
@@ -60,15 +59,7 @@ pub trait System: core::fmt::Debug + Clone + Copy + PartialEq {
 
     fn dist_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64;
 
-    fn dist_rel_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64 {
-        Self::dist_pt_pt(p1, p2)
-    }
-
     fn dist_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64;
-
-    fn dist_rel_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
-        Self::dist_pt_line(pt, line)
-    }
 
     fn dist_bounds_bounds(b1: &Bounds<Self::Geometry>, b2: &Bounds<Self::Geometry>) -> f64;
 }
