@@ -1,9 +1,11 @@
 // A quadtree implementation for bounded items (i.e. those with a finite width
 // and/or height)
+mod node;
 
-use super::*;
-use bounds_node::*;
+use crate::*;
+use node::*;
 
+#[derive(Debug)]
 pub struct BoundsQuadTree<T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> {
     root: BoundsNode<T, Geom>,
     size: usize,
@@ -57,11 +59,11 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
         }
     }
 
-    fn iter(&self) -> QuadTreeIter<'_, T, Geom> {
+    // fn iter(&self) -> QuadTreeIter<'_, T, Geom> {
         // QuadTreeIter::new(&self.root)
         // TODO: The iterator is struggling with the types
-        todo!()
-    }
+    //     todo!()
+    // }
 
     fn find(&self, cmp: &Point<Geom>) -> Option<&T> {
         let mut stack = vec![&self.root];
@@ -69,7 +71,8 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
         let mut min_item: Option<&T> = None;
 
         while let Some(node) = stack.pop() {
-            // No need to check the children if the bounds are too far
+            // No need to check the children if the bounds are too far,
+            // checking bounds is cheaper then checking each child
             let bounds_dist = node.bounds().dist(cmp);
             if bounds_dist >= min_dist { continue; }
 

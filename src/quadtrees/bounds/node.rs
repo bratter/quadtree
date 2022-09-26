@@ -1,11 +1,11 @@
-use super::*;
+use crate::*;
 
 #[derive(Debug)]
 pub struct BoundsNode<T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> {
-    pub bounds: Bounds<Geom>,
-    pub depth: u8,
-    pub max_depth: u8,
-    pub max_children: usize,
+    bounds: Bounds<Geom>,
+    depth: u8,
+    max_depth: u8,
+    max_children: usize,
     pub children: Vec<T>,
     pub stuck_children: Vec<T>,
     pub nodes: Option<Box<[BoundsNode<T, Geom>; 4]>>,

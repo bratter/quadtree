@@ -1,11 +1,9 @@
-use std::marker::PhantomData;
-
-// TODO: Possible to simplfy the generics? Ref https://www.youtube.com/watch?v=yozQ9C69pNs, could remove the generic on System, but keep the associated type
-// TODO: Rearrange the node/qt modules
-// TODO: Implement KNN
+// Module declarations
 pub mod euclidean;
 pub mod spherical;
 mod bounds;
+
+use std::marker::PhantomData;
 
 // Re-export the coordinate system for easier access
 // Should be the only thing commonly used, everything else can be accessed from
@@ -15,36 +13,6 @@ pub use spherical::Spherical;
 
 // Re-export everything from bounds so its available under the same namespace
 pub use bounds::*;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Point<Geom> {
-    x: f64,
-    y: f64,
-    geometry: PhantomData<Geom>,
-}
-
-impl <Geom: System> Point<Geom> {
-    pub fn new(x: f64, y: f64) -> Point<Geom> {
-        Point { x, y, geometry: PhantomData }
-    }
-
-    pub fn as_tuple(&self) -> (f64, f64) {
-        (self.x, self.y)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Segment<Geom> {
-    a: Point<Geom>,
-    b: Point<Geom>,
-    geometry: PhantomData<Geom>,
-}
-
-impl <Geom: System> Segment<Geom> {
-    pub fn new(a: Point<Geom>, b: Point<Geom>) -> Segment<Geom> {
-        Segment { a, b, geometry: PhantomData }
-    }
-}
 
 pub trait System: core::fmt::Debug + Clone + Copy + PartialEq {
     type Geometry;
@@ -79,20 +47,50 @@ pub trait Distance<T> {
     // fn dist_rel(&self, cmp: &T) -> f64;
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Point<Geom> {
+    x: f64,
+    y: f64,
+    geometry: PhantomData<Geom>,
+}
+
+impl <Geom: System> Point<Geom> {
+    pub fn new(x: f64, y: f64) -> Point<Geom> {
+        Point { x, y, geometry: PhantomData }
+    }
+
+    pub fn as_tuple(&self) -> (f64, f64) {
+        (self.x, self.y)
+    }
+}
+
 impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Point<Geom> {
     fn dist(&self, cmp: &Point<Geom>) -> f64 {
         Geom::dist_pt_pt(self, cmp)
     }
 }
 
-impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Segment<Geom> {
-    fn dist(&self, cmp: &Point<Geom>) -> f64 {
-        Geom::dist_pt_line(cmp, self)
-    }
-}
-
 impl <Geom: System<Geometry = Geom>> Distance<Segment<Geom>> for Point<Geom> {
     fn dist(&self, cmp: &Segment<Geom>) -> f64 {
         Geom::dist_pt_line(self, cmp)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Segment<Geom> {
+    a: Point<Geom>,
+    b: Point<Geom>,
+    geometry: PhantomData<Geom>,
+}
+
+impl <Geom: System> Segment<Geom> {
+    pub fn new(a: Point<Geom>, b: Point<Geom>) -> Segment<Geom> {
+        Segment { a, b, geometry: PhantomData }
+    }
+}
+
+impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Segment<Geom> {
+    fn dist(&self, cmp: &Point<Geom>) -> f64 {
+        Geom::dist_pt_line(cmp, self)
     }
 }
