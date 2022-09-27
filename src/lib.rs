@@ -3,6 +3,9 @@
  * TODO: Use https://georust.org/ for geographic primitives instead
  * TODO: Possible to simplify the generics? Ref https://www.youtube.com/watch?v=yozQ9C69pNs
  * TODO: Implement KNN
+ * TODO: Should part of node be modeled as an enum to account for children vs nodes?
+ * TODO: Should spherical units deal with degrees rather than radians? Degrees are useful for readability, but radians make for easy conversions
+ * TODO: Should nodes and children be private on the node structs?
  */
 
 pub mod geom;

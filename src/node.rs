@@ -1,6 +1,5 @@
 use super::*;
 
-// TODO: Should part of node be modeled as an enum to account for children vs nodes?
 pub trait Node <T: Datum<Geom>, Geom: System<Geometry = Geom>>
 where Self: Sized {
     fn new(bounds: Bounds<Geom>, depth: u8, max_depth: u8, max_children: usize) -> Self;
@@ -82,7 +81,7 @@ where Self: Sized {
     }
 }
 
-// TODO: Better to implement iter on Node?
+// TODO: Better to implement as iter on Node?
 pub fn get_all_children<N: Node<T, Geom>, T: Datum<Geom>, Geom: System<Geometry = Geom>>(node: &N) -> Vec<&T> {
     let mut children = node.children();
 

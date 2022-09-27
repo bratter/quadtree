@@ -1,6 +1,3 @@
-// TODO: Should test these, perhaps juat pull in some tests from turf.js
-// TODO: Consider a unit overlay to help with conversions
-
 use std::f64::consts::PI;
 use std::ops::{Add, Sub};
 

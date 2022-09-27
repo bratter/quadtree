@@ -1,7 +1,5 @@
 type Pt = (f64, f64);
 
-// TODO: Should test these
-
 /// Calculate the square of the distance between a point `p` and reference
 /// point `p1`. This version producing the square is provided to avoid an
 /// expensive `.sqrt()` operation when not required.

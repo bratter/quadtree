@@ -4,10 +4,6 @@ use super::*;
 /// Module containing spherical coordinate math
 pub mod math;
 
-// TODO: What units should this take and return?
-//       Accepting degrees is useful, because that's how lng/lat are usually noted
-//       Returning radians is useful because its easy to convert
-//       Would ideally be consistent, so starting with accepting radians, returning radians
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Spherical {}
 impl System for Spherical {

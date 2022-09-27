@@ -1,6 +1,5 @@
 use crate::*;
 
-// TODO: Make nodes and children private?
 #[derive(Debug)]
 pub struct PointNode<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
     bounds: Bounds<Geom>,
