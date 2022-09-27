@@ -38,7 +38,6 @@ impl System for Spherical {
             // return the difference - no need to run through haversine
             // as latitude math maps directly to radians
             (true, false) => {
-                println!("Lng overlap");
                 let d1 = (b1.y_min() - b2.y_max()).abs();
                 let d2 = (b2.y_min() - b1.y_max()).abs();
 
@@ -48,7 +47,6 @@ impl System for Spherical {
             // maximum abs value of lat (closest to the poles) and calc
             // distance for this lat and the respective lngs
             (false, true) => {
-                println!("Lat overlap");
                 // Point of max overlap is the min of the bounds maxes
                 let min_lat = b1.y_min().max(b2.y_min());
                 let max_lat = b1.y_max().min(b2.y_max());
@@ -68,7 +66,6 @@ impl System for Spherical {
             // When neither overlaps, take the distance from the closest
             // corners, accounting for wrapping lngs
             (false, false) => {
-                println!("No overlaps");
                 // Easiest way to adjust for lng wrapping is to take the pair
                 // with the min lng delta, because Lng::sub deals with wrapping
                 let delta_xa = f64::from(Lng::from(b1.x_max()) - Lng::from(b2.x_min())).abs();
@@ -224,7 +221,5 @@ mod tests {
         let b2 = Bounds::new(Spherical::point(-2.8, -0.4), 0.1, 0.2);
         let d = Spherical::point(3.0, 0.0).dist(&Spherical::point(-2.8, 0.2));
         assert!(b1.dist(&b2) - d < EPSILON);
-
-        println!("{:4}, {:4}", b1.dist(&b2), d);
     }
 }

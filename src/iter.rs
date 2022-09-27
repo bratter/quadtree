@@ -1,63 +1,71 @@
-// Iterator implementation for a quadtree
-// use crate::quadtrees::point::*;
+use std::marker::PhantomData;
 use super::*;
 
-// impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a PointQuadTree<T, Geom> {
-//     type Item = &'a T;
-//     type IntoIter = QuadTreeIter<'a, T, Geom>;
+// Iterator implementation for a quadtree
+pub struct QuadTreeIter<'a, D, N, Geom>
+where
+    D: Datum<Geom>,
+    N: Node<D, Geom>,
+    Geom: System<Geometry = Geom>,
+{
+    stack: Vec<&'a N>,
+    children: Option<Vec<&'a D>>,
+    geom: PhantomData<Geom>,
+}
 
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.iter()
-//     }
-// }
+impl <'a, D, N, Geom> QuadTreeIter<'a, D, N, Geom>
+where
+    D: Datum<Geom>,
+    N: Node<D, Geom>,
+    Geom: System<Geometry = Geom>,
+{
+    pub fn new(root: &'a N) -> Self {
+        Self { stack: vec![root], children: None, geom: PhantomData }
+    }
+}
 
-// pub struct QuadTreeIter<'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> {
-//     stack: Vec<&'a PointNode<T, Geom>>,
-//     child_iter: Option<std::slice::Iter<'a, T>>,
-// }
+impl <'a, D, N, Geom> Iterator for QuadTreeIter<'a, D, N, Geom>
+where
+    D: Datum<Geom>,
+    N: Node<D, Geom>,
+    Geom: System<Geometry = Geom>,
+{
+    type Item = &'a D;
 
-// impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTreeIter<'a, T, Geom> {
-//     pub fn new(root: &'a PointNode<T, Geom>) -> Self {
-//         QuadTreeIter { stack: vec![root], child_iter: None }
-//     }
-// }
+    fn next(&mut self) -> Option<Self::Item> {
+        // If we are currently working through children,
+        // keep going if there are still results left
+        if let Some(children) = &mut self.children {
+            if children.len() > 0 {
+                return children.pop();
+            }
+        }
+        
+        while !self.stack.is_empty() {
+            let cur_node = self.stack.pop()?;
+            
+            // When we have sub-nodes, push onto the stack in reverse order
+            if let Some(sub_nodes) = &cur_node.nodes() {
+                for i in 0..4 {
+                    self.stack.push(&sub_nodes[3 - i]);
+                }
+            }
+            
+            // Now grab the children and save them for iteration
+            // Have to do for all nodes, as children may not only be at leaves
+            let mut children = cur_node.children();
+            match children.len() {
+                0 => { continue; },
+                1 => { return children.pop(); },
+                _ => {
+                    let child = children.pop();
+                    self.children = Some(children);
+                    return child;
+                },
+            }
+        }
 
-// impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> Iterator for QuadTreeIter<'a, T, Geom> {
-//     type Item = &'a T;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         // If we are currently working through a child iterator,
-//         // keep going if there are still results left
-//         let next = self.child_iter.as_mut().and_then(|x| x.next());
-//         if next.is_some() { return next; }
-
-//         while !self.stack.is_empty() {
-//             let cur_node = self.stack.pop()?;
-
-//             match &cur_node.nodes {
-//                 Some(sub_nodes) => {
-//                     // When we have sub-nodes, push onto the stack in reverse order
-//                     for i in 0..4 {
-//                         self.stack.push(&sub_nodes[3 - i]);
-//                     }
-//                     continue;
-//                 }
-//                 None => {
-//                     // When there are no sub-nodes, grab an iterator for the children
-//                     let mut child_iter = cur_node.children.iter();
-
-//                     match child_iter.next() {
-//                         Some(item) => {
-//                             self.child_iter = Some(child_iter);
-//                             return Some(item);
-//                         }
-//                         None => { continue; }
-//                     }
-//                 }
-//             }
-//         }
-
-//         // Finally return None if nothing left
-//         None
-//     }
-// }
+        // Finally return None if nothing left
+        None
+    }
+}

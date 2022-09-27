@@ -12,6 +12,10 @@ where Self: Sized {
 
     fn max_children(&self) -> usize;
 
+    fn children(&self) -> Vec<&T>;
+
+    fn nodes(&self) -> &Option<Box<[Self; 4]>>;
+
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>);
 
     fn insert(&mut self, datum: T);
@@ -30,7 +34,7 @@ where Self: Sized {
         else { SubNode::BottomRight }
     }
 
-    fn subdivide(&mut self) {
+    fn subdivide(&mut self) where Self: Sized {
         let bounds = self.bounds();
         let depth = self.depth() + 1;
         let md = self.max_depth();

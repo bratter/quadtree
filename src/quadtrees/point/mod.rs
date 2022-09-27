@@ -1,8 +1,9 @@
-use crate::*;
-
 mod node;
+
+use crate::*;
 use node::*;
 
+/// A quadtree implementation for points.
 #[derive(Debug)]
 pub struct PointQuadTree<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
     root: PointNode<T, Geom>,
@@ -32,7 +33,7 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for Point
         PointQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
     }
 
-    fn new_def(bounds: Bounds<Geom>) -> Self {
+    fn default(bounds: Bounds<Geom>) -> Self {
         PointQuadTree::private_new(bounds, None, None)
     }
 
@@ -59,12 +60,6 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for Point
             vec![]
         }
     }
-
-    // fn iter(&self) -> QuadTreeIter<'_, T, Geom> {
-        // TODO: Fix this
-        // todo!()
-        // QuadTreeIter::new(&self.root)
-    // }
 
     fn find(&self, cmp: &Point<Geom>) -> Option<&T> {
         let mut stack = vec![&self.root];
@@ -93,6 +88,16 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for Point
     }
 }
 
+// TODO: Check that this only does not consume the underlying QT
+impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a PointQuadTree<T, Geom> {
+    type Item = &'a T;
+    type IntoIter = QuadTreeIter<'a, T, PointNode<T, Geom>, Geom>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        QuadTreeIter::new(&self.root)
+    }
+}
+
 impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for PointQuadTree<T, Geom> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Quadtree Root:")?;
@@ -117,7 +122,7 @@ mod tests {
     #[test]
     fn subdivide_occurs_at_max_children() {
         let origin = Point::new(0.0, 0.0);
-        let mut qt = PointQuadTree::new_def(Bounds::new(origin, 1.0, 1.0));
+        let mut qt = PointQuadTree::default(Bounds::new(origin, 1.0, 1.0));
         
         // Using a data wrapper here
         let pt1 = MyData(0.1, 0.1);

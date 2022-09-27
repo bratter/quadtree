@@ -1,10 +1,10 @@
-// A quadtree implementation for bounded items (i.e. those with a finite width
-// and/or height)
 mod node;
 
 use crate::*;
 use node::*;
 
+/// A quadtree implementation for bounded items (i.e. those with a finite width
+/// and/or height).
 #[derive(Debug)]
 pub struct BoundsQuadTree<T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> {
     root: BoundsNode<T, Geom>,
@@ -24,15 +24,12 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> BoundsQuadTree<T, Geo
     }
 }
 
-// TODO: Can quadtree be a single implementation that uses different nodes? With the exception of find
-//       Can Node be an unexported trait that implements its methods differently?
-//       Or at least what can be moved to the trait?
 impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for BoundsQuadTree<T, Geom> {
     fn new(bounds: Bounds<Geom>, max_depth: u8, max_children: usize) -> Self {
         BoundsQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
     }
 
-    fn new_def(bounds: Bounds<Geom>) -> Self {
+    fn default(bounds: Bounds<Geom>) -> Self {
         BoundsQuadTree::private_new(bounds, None, None)
     }
 

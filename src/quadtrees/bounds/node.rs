@@ -29,6 +29,10 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for Bou
     fn depth(&self) -> u8 { self.depth }
     fn max_depth(&self) -> u8 { self.max_depth }
     fn max_children(&self) -> usize { self.max_children }
+    fn children(&self) -> Vec<&T> {
+        self.children.iter().chain(&self.stuck_children).collect()
+    }
+    fn nodes(&self) -> &Option<Box<[Self; 4]>> { &self.nodes }
 
     // Setters
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
