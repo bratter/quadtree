@@ -56,8 +56,6 @@ pub trait QuadTree<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
 
     fn retrieve(&self, datum: &T) -> Vec<&T>;
 
-    // fn iter(&self) -> QuadTreeIter<'_, T, Geom>;
-
     /// Find the closest datum in the quadtree to the passed point.
     fn find(&self, datum: &Point<Geom>) -> Option<&T>;
 }

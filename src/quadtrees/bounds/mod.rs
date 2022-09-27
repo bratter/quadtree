@@ -56,12 +56,6 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
         }
     }
 
-    // fn iter(&self) -> QuadTreeIter<'_, T, Geom> {
-        // QuadTreeIter::new(&self.root)
-        // TODO: The iterator is struggling with the types
-    //     todo!()
-    // }
-
     fn find(&self, cmp: &Point<Geom>) -> Option<&T> {
         let mut stack = vec![&self.root];
         let mut min_dist = f64::INFINITY;
@@ -85,5 +79,101 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
         }
 
         min_item
+    }
+}
+
+impl <'a, T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a BoundsQuadTree<T, Geom> {
+    type Item = &'a T;
+    type IntoIter = QuadTreeIter<'a, T, BoundsNode<T, Geom>, Geom>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        QuadTreeIter::new(&self.root)
+    }
+}
+
+impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for BoundsQuadTree<T, Geom> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Bounds Quadtree Root:")?;
+        write!(f, "{}", self.root)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::vec;
+
+    use super::*;
+
+    // Set up Bounds to act as a BoundsDatum
+    impl Datum<Euclidean> for Bounds<Euclidean> {
+        fn point(&self) -> Point<Euclidean> {
+            Euclidean::point(self.x_min(), self.y_min())
+        }
+    }
+
+    impl BoundsDatum<Euclidean> for Bounds<Euclidean> {
+        fn bounds(&self) -> Bounds<Euclidean> {
+            self.clone()
+        }
+    }
+
+    impl PartialEq for Bounds<Euclidean> {
+        fn eq(&self, other: &Self) -> bool {
+            self.point() == other.point()
+            && self.height() == other.height()
+            && self.width() == other.width()
+        }
+    }
+
+    // helper function for bounds datum creation
+    fn b(x: f64, y: f64, w: f64, h: f64) -> Bounds<Euclidean> {
+        Bounds::new(Euclidean::point(x, y), w, h)
+    }
+
+    #[test]
+    #[allow(unused_variables)]
+    fn retrieve_grabs_all_in_overlapping_bounds() {
+        let origin = Euclidean::point(0.0, 0.0);
+        let bounds = Bounds::new(origin, 8.0, 8.0);
+        let mut qt = BoundsQuadTree::new(bounds, 2, 2);
+
+        // In root[TL][TL]
+        let b1 = b(1.0, 1.0, 1.0, 1.0);
+        // In root[TL][BR]
+        let b2 = b(3.0, 3.0, 1.0, 1.0);
+        // Stuck in root[TL]
+        let b3 = b(1.0, 1.0, 2.0, 2.0);
+        // Stuck in the root node
+        let b4 = b(6.0, 2.0, 1.0, 4.0);
+        // In root[TR]
+        let b5 = b(6.0, 1.0, 1.0, 1.0);
+        // In root[BR]
+        let b6 = b(6.0, 5.0, 1.0, 1.0);
+
+        qt.insert(b1.clone());
+        qt.insert(b1.clone());
+        qt.insert(b2.clone());
+        qt.insert(b3.clone());
+        qt.insert(b4.clone());
+        qt.insert(b5.clone());
+        qt.insert(b6.clone());
+
+        // Dropping into an empty node returns only the one stuck on root
+        let cmp = b(1.0, 5.0, 1.0, 1.0);
+        assert_eq!(qt.retrieve(&cmp), vec![&b4]);
+
+        // Dropping into a node with a child returns both the child and the stuck ones above
+        // Stuck children happens after recursion, so will be at the end, inside out
+        let cmp = b(5.0, 5.0, 0.5, 0.5);
+        assert_eq!(qt.retrieve(&cmp), vec![&b6, &b4]);
+
+        // Straddling two node returns from both and all stuck
+        let cmp = b(5.0, 3.0, 2.0, 2.0);
+        assert_eq!(qt.retrieve(&cmp), vec![&b5, &b6, &b4]);
+
+        // Straddling two nodes returns everything from all sub-nodes of both, and all stuck
+        // This includes if the sub node is not directly covered
+        let cmp = b(1.0, 1.0, 1.0, 2.0);
+        assert_eq!(qt.retrieve(&cmp), vec![&b1, &b1, &b2, &b3, &b4]);
     }
 }

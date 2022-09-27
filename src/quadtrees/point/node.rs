@@ -84,25 +84,8 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for PointNode
     }
 }
 
-// TODO: Can this be made universal
 impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for PointNode<T, Geom> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let indent = " ".repeat(self.depth as usize * 4);
-        let count = self.children.len();
-        let children = if count == 0 {
-            "".to_owned()
-        } else if count == 1 {
-            " 1 child".to_owned()
-        } else {
-            format!(" {count} children")
-        };
-
-        writeln!(f, "{indent}({:.2}, {:.2}):{children}", self.bounds.x_min(), self.bounds.y_min())?;
-        if let Some(nodes) = &self.nodes {
-            for node in &**nodes {
-                write!(f, "{node}")?;
-            }
-        };
-        write!(f, "")
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.display(f)
     }
 }

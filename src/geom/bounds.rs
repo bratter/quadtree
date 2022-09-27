@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Bounds<Geom> {
     origin: Point<Geom>,
     width: f64,
@@ -86,6 +86,17 @@ impl <Geom: System> Bounds<Geom> {
         && bounds.x_max() <= self.x_max()
         && bounds.y_min() >= self.y_min()
         && bounds.y_max() <= self.y_max()
+    }
+
+    // TODO: Could also be in an intersect trait
+    /// Checks whether two bounds overlap
+    pub fn bounds_overlap(&self, bounds: Bounds<Geom>) -> bool {
+        let (b1, b2) = (self, bounds);
+
+        b1.x_max() >= b2.x_min()
+        && b2.x_max() >= b1.x_min()
+        && b1.y_max() >= b2.y_min()
+        && b2.y_max() >= b1.y_min()
     }
 }
 

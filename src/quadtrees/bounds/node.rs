@@ -53,7 +53,7 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for Bou
                 if sub_node.bounds().contains_bounds(datum.bounds()) {
                     sub_node.insert(datum)
                 } else {
-                    sub_node.stuck_children.push(datum);
+                    self.stuck_children.push(datum);
                 }
 
                 // Make sure to replace the nodes
@@ -71,30 +71,43 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for Bou
                 for pt in children { self.insert(pt); }
             }
             // Otherwise can simply push the point
-            None => {
-                self.children.push(datum);
-            }
+            None => self.children.push(datum)
         }
     }
 
     fn retrieve(&self, datum: &T) -> Vec<&T> {
         let mut children = match &self.nodes {
+            // Where there are nodes, processes them
             Some(nodes) => {
                 let sub_node = &nodes[self.find_sub_node(datum) as usize];
+
                 if sub_node.bounds().contains_bounds(datum.bounds()) {
                     sub_node.retrieve(datum)
                 } else {
-                    // TODO: Add the extra children if we sit on the boundary, following mike chambers logic
-                    todo!()
+                    let mut inner = vec![];
+                    // Return the entire contents of any overlapping node
+                    // Same semantics as https://github.com/mikechambers/ExamplesByMesh/blob/master/JavaScript/QuadTree/src/QuadTree.js
+                    for sub_node in &**nodes {
+                        if sub_node.bounds().bounds_overlap(datum.bounds()) {
+                            inner.extend(get_all_children(sub_node));
+                        }
+                    }
+                    inner
                 }
             }
-            None => {
-                self.children.iter().collect()
-            }
+            // Where there are no nodes, return the children
+            // There will be no children where there are child nodes
+            None => self.children.iter().collect()
         };
 
-        // Always add the stuck children
+        // Always add the stuck children, this happens after the recursion
         children.extend(&self.stuck_children);
         children
+    }
+}
+
+impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for BoundsNode<T, Geom> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.display(f)
     }
 }

@@ -1,5 +1,6 @@
 use super::*;
 
+// TODO: Should part of node be modeled as an enum to account for children vs nodes?
 pub trait Node <T: Datum<Geom>, Geom: System<Geometry = Geom>>
 where Self: Sized {
     fn new(bounds: Bounds<Geom>, depth: u8, max_depth: u8, max_children: usize) -> Self;
@@ -12,6 +13,10 @@ where Self: Sized {
 
     fn max_children(&self) -> usize;
 
+    /// Return a vector with references to all children of the current node.
+    /// This includes direct children and any stuck children if that concept
+    /// exists for this QuadTree type. This means that any node, not just leaf
+    /// nodes, may have children.
     fn children(&self) -> Vec<&T>;
 
     fn nodes(&self) -> &Option<Box<[Self; 4]>>;
@@ -54,4 +59,38 @@ where Self: Sized {
             Self::new(Bounds::new(Point::new(x1, y2), wh, hh), depth, md, mc),
         ])));
     }
+
+    fn display(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let indent = " ".repeat(self.depth() as usize * 4);
+        let count = self.children().len();
+        let children = if count == 0 {
+            "".to_owned()
+        } else if count == 1 {
+            " 1 child".to_owned()
+        } else {
+            format!(" {count} children")
+        };
+
+        writeln!(f, "{indent}({:.2}, {:.2}):{children}", self.bounds().x_min(), self.bounds().y_min())?;
+
+        if let Some(nodes) = &self.nodes() {
+            for node in &**nodes {
+                node.display(f)?
+            }
+        };
+        write!(f, "")
+    }
+}
+
+// TODO: Better to implement iter on Node?
+pub fn get_all_children<N: Node<T, Geom>, T: Datum<Geom>, Geom: System<Geometry = Geom>>(node: &N) -> Vec<&T> {
+    let mut children = node.children();
+
+    if let Some(nodes) = node.nodes() {
+        for sub_node in &**nodes {
+            children.extend(get_all_children(sub_node));
+        }
+    }
+
+    children
 }

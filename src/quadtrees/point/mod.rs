@@ -88,7 +88,6 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for Point
     }
 }
 
-// TODO: Check that this only does not consume the underlying QT
 impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a PointQuadTree<T, Geom> {
     type Item = &'a T;
     type IntoIter = QuadTreeIter<'a, T, PointNode<T, Geom>, Geom>;
@@ -100,7 +99,7 @@ impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a Po
 
 impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for PointQuadTree<T, Geom> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Quadtree Root:")?;
+        writeln!(f, "Point Quadtree Root:")?;
         write!(f, "{}", self.root)
     }
 }
