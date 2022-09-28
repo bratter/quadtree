@@ -1,4 +1,6 @@
 /*
+ * TODO: Force constraints on spherical coords
+ * TODO: Should we use Error semantics for insertion? Probably yes
  * TODO: Should this have an integer-with-power-2-bounds version?
  * TODO: Use https://georust.org/ for geographic primitives instead
  * TODO: Possible to simplify the generics? Ref https://www.youtube.com/watch?v=yozQ9C69pNs
@@ -6,6 +8,7 @@
  * TODO: Should part of node be modeled as an enum to account for children vs nodes?
  * TODO: Should spherical units deal with degrees rather than radians? Degrees are useful for readability, but radians make for easy conversions
  * TODO: Should nodes and children be private on the node structs?
+ * TODO: Are the find semantics the best? Should we constrain the X by Datum instead as we know the point will always work
  */
 
 pub mod geom;
@@ -45,6 +48,26 @@ impl <Geom: System<Geometry = Geom>> Datum<Geom> for Point<Geom> {
     }
 }
 
+// Nothing stopping a point having a zero-sized bounds for a Bounds qt
+impl <Geom: System<Geometry = Geom>> BoundsDatum<Geom> for Point<Geom> {
+    fn bounds(&self) -> Bounds<Geom> {
+        Bounds::from_origin(*self, 0.0, 0.0)
+    }
+}
+
+// Also turn a Segment into a BoundsDatum so it can be used in a Bounds qt directly
+impl <Geom: System<Geometry = Geom>> Datum<Geom> for Segment<Geom> {
+    fn point(&self) -> Point<Geom> {
+        self.a()
+    }
+}
+
+impl <Geom: System<Geometry = Geom>> BoundsDatum<Geom> for Segment<Geom> {
+    fn bounds(&self) -> Bounds<Geom> {
+        Bounds::from_points(self.a(), self.b())
+    }
+}
+
 pub trait QuadTree<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
     /// Create a new Quadtree.
     fn new(bounds: Bounds<Geom>, max_depth: u8, max_children: usize) -> Self;
@@ -59,6 +82,12 @@ pub trait QuadTree<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
 
     fn retrieve(&self, datum: &T) -> Vec<&T>;
 
-    /// Find the closest datum in the quadtree to the passed point.
-    fn find(&self, datum: &Point<Geom>) -> Option<&T>;
+    /// Find the closest datum in the quadtree to the passed comparator.
+    /// Returns the datum and the distance to the point in a tuple. The
+    /// comparator must implement the Distance trait for Bounds and T.
+    /// 
+    /// This will often require an `impl Distance<T> for X` block, which will
+    /// be trivial in most cases, as it can delegate to the underlying geometry.
+    fn find<X>(&self, cmp: &X) -> Option<(&T, f64)>
+    where X: Distance<Bounds<Geom>> + Distance<T>;
 }

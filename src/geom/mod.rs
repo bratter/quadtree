@@ -87,6 +87,9 @@ impl <Geom: System> Segment<Geom> {
     pub fn new(a: Point<Geom>, b: Point<Geom>) -> Segment<Geom> {
         Segment { a, b, geometry: PhantomData }
     }
+
+    pub fn a(&self) -> Point<Geom> { self.a }
+    pub fn b(&self) -> Point<Geom> { self.b }
 }
 
 impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Segment<Geom> {

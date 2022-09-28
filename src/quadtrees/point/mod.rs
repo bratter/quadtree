@@ -61,7 +61,10 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for Point
         }
     }
 
-    fn find(&self, cmp: &Point<Geom>) -> Option<&T> {
+    fn find<X>(&self, cmp: &X) -> Option<(&T, f64)> 
+    where
+        X: Distance<Bounds<Geom>> + Distance<T>
+    {
         let mut stack = vec![&self.root];
         let mut min_dist = f64::INFINITY;
         let mut min_item: Option<&T> = None;
@@ -70,21 +73,28 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for Point
             // First look at the current node and check if it should be
             // processed - skip processing if the edge of the node is further
             // than the current 
-            let bounds_dist = node.bounds().dist(cmp);
+            let bounds_dist = cmp.dist(node.bounds());
             if bounds_dist >= min_dist { continue; }
 
             // Loop through all the children of the current node, retaining
             // only the currently closest child
-            for child in &node.children {
-                let child_dist = child.point().dist(cmp);
+            for child in node.children() {
+                let child_dist = cmp.dist(child);
                 if child_dist < min_dist {
                     min_dist = child_dist;
                     min_item = Some(child);
                 }
             }
+
+            // Push nodes onto the stack in reverse order
+            if let Some(sub_nodes) = node.nodes() {
+                for i in 0..4 {
+                    stack.push(&sub_nodes[3 - i]);
+                }
+            }
         }
 
-        min_item
+        min_item.map(|item| (item, min_dist))
     }
 }
 

@@ -56,7 +56,10 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
         }
     }
 
-    fn find(&self, cmp: &Point<Geom>) -> Option<&T> {
+    fn find<X>(&self, cmp: &X) -> Option<(&T, f64)> 
+    where
+        X: Distance<Bounds<Geom>> + Distance<T>
+    {
         let mut stack = vec![&self.root];
         let mut min_dist = f64::INFINITY;
         let mut min_item: Option<&T> = None;
@@ -64,21 +67,34 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
         while let Some(node) = stack.pop() {
             // No need to check the children if the bounds are too far,
             // checking bounds is cheaper then checking each child
-            let bounds_dist = node.bounds().dist(cmp);
+            let bounds_dist = cmp.dist(node.bounds());
             if bounds_dist >= min_dist { continue; }
 
             // Loop through all the children of the current node, retaining
             // only the currently closest child, stuck or otherwise
-            for child in node.children.iter().chain(&node.stuck_children) {
-                let child_dist = child.bounds().dist(cmp);
+            // Children will iterate through all children, stuck or otherwise
+            for child in node.children() {
+                // TODO: Child dist here is not correct - need to check bounds first, then do the actual dist
+
+                // Shortcut the potentially complex distance calc by using the bounds
+                if cmp.dist(&child.bounds()) > min_dist { continue; }
+
+                let child_dist = cmp.dist(child);
                 if child_dist < min_dist {
                     min_dist = child_dist;
                     min_item = Some(child);
                 }
             }
+
+            // Push nodes onto the stack in reverse order
+            if let Some(sub_nodes) = node.nodes() {
+                for i in 0..4 {
+                    stack.push(&sub_nodes[3 - i]);
+                }
+            }
         }
 
-        min_item
+        min_item.map(|item| (item, min_dist))
     }
 }
 

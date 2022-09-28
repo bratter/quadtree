@@ -113,6 +113,12 @@ impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Bounds<Geom> {
     }
 }
 
+impl <Geom: System<Geometry = Geom>> Distance<Bounds<Geom>> for Point<Geom> {
+    fn dist(&self, cmp: &Bounds<Geom>) -> f64 {
+        cmp.dist(self)
+    }
+}
+
 impl <Geom: System<Geometry = Geom>> Distance<Bounds<Geom>> for Bounds<Geom> {
     fn dist(&self, cmp: &Bounds<Geom>) -> f64 {
         Geom::dist_bounds_bounds(self, cmp)
