@@ -96,6 +96,13 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for Point
 
         min_item.map(|item| (item, min_dist))
     }
+
+    fn knn<X>(&self, cmp: &X, k: usize, r: f64) -> Vec<(&T, f64)>
+    where
+        X: Distance<Bounds<Geom>> + Distance<T>
+    {
+        knn(&self.root, cmp, k, r)
+    }
 }
 
 impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a PointQuadTree<T, Geom> {

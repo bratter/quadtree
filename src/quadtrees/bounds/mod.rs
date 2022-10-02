@@ -1,5 +1,7 @@
 mod node;
 
+use std::vec;
+
 use crate::*;
 use node::*;
 
@@ -74,8 +76,6 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
             // only the currently closest child, stuck or otherwise
             // Children will iterate through all children, stuck or otherwise
             for child in node.children() {
-                // TODO: Child dist here is not correct - need to check bounds first, then do the actual dist
-
                 // Shortcut the potentially complex distance calc by using the bounds
                 if cmp.dist(&child.bounds()) > min_dist { continue; }
 
@@ -95,6 +95,13 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
         }
 
         min_item.map(|item| (item, min_dist))
+    }
+
+    fn knn<X>(&self, cmp: &X, k: usize, r: f64) -> Vec<(&T, f64)>
+    where
+        X: Distance<Bounds<Geom>> + Distance<T>
+    {
+        knn(&self.root, cmp, k, r)
     }
 }
 

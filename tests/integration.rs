@@ -214,3 +214,55 @@ fn find_returns_closest_in_speherical_in_bounds_qt() {
     assert!((dist - dist_cmp).abs() < EPSILON);
     assert_eq!(datum, &d1);
 }
+
+#[test]
+fn knn_on_point_qt_returns_k_nodes_in_dist_order() {
+    let origin = Euclidean::point(0.0, 0.0);
+    let bounds = Bounds::new(origin, 8.0, 8.0);
+    let mut qt = PointQuadTree::new(bounds, 2, 2);
+
+    let p1 = Euclidean::point(2.0, 2.0);
+    let p2 = Euclidean::point(3.0, 3.0);
+    let p3 = Euclidean::point(6.0, 6.0);
+
+    qt.insert(p1.clone());
+    qt.insert(p1.clone());
+    qt.insert(p2.clone());
+    qt.insert(p3.clone());
+
+    let cmp = Euclidean::point(6.0, 5.0);
+    let res = qt.knn(&cmp, 3, f64::INFINITY);
+
+    assert_eq!(res.len(), 3);
+    assert_eq!(res[0].0.as_tuple(), p3.as_tuple());
+    assert_eq!(res[0].1, 1.0);
+    assert_eq!(res[1].0.as_tuple(), p2.as_tuple());
+    assert!((res[1].1 - 13.0f64.sqrt()).abs() < EPSILON);
+    assert_eq!(res[2].0.as_tuple(), p1.as_tuple());
+    assert!((res[2].1 - 5.0).abs() < EPSILON);
+}
+
+#[test]
+fn knn_on_point_qt_stops_at_r() {
+    let origin = Euclidean::point(0.0, 0.0);
+    let bounds = Bounds::new(origin, 8.0, 8.0);
+    let mut qt = PointQuadTree::new(bounds, 2, 2);
+
+    let p1 = Euclidean::point(2.0, 2.0);
+    let p2 = Euclidean::point(3.0, 3.0);
+    let p3 = Euclidean::point(6.0, 6.0);
+
+    qt.insert(p1.clone());
+    qt.insert(p1.clone());
+    qt.insert(p2.clone());
+    qt.insert(p3.clone());
+
+    let cmp = Euclidean::point(6.0, 5.0);
+    let res = qt.knn(&cmp, 3, 4.0);
+    
+    assert_eq!(res.len(), 2);
+    assert_eq!(res[0].0.as_tuple(), p3.as_tuple());
+    assert_eq!(res[0].1, 1.0);
+    assert_eq!(res[1].0.as_tuple(), p2.as_tuple());
+    assert!((res[1].1 - 13.0f64.sqrt()).abs() < EPSILON);
+}
