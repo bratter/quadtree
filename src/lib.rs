@@ -27,13 +27,6 @@ pub use quadtrees::bounds::BoundsQuadTree;
 pub const DEFAULT_MAX_CHILDREN: usize = 4;
 pub const DEFAULT_MAX_DEPTH: u8 = 4;
 
-pub enum SubNode {
-    TopLeft = 0,
-    TopRight = 1,
-    BottomRight = 2,
-    BottomLeft = 3,
-}
-
 pub trait Datum<Geom: System<Geometry = Geom>> {
     fn point(&self) -> Point<Geom>;
 }

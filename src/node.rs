@@ -1,7 +1,16 @@
 use super::*;
 
+pub enum SubNode {
+    TopLeft = 0,
+    TopRight = 1,
+    BottomRight = 2,
+    BottomLeft = 3,
+}
+
 pub trait Node <T: Datum<Geom>, Geom: System<Geometry = Geom>>
-where Self: Sized {
+where
+    Self: Sized
+{
     fn new(bounds: Bounds<Geom>, depth: u8, max_depth: u8, max_children: usize) -> Self;
 
     fn bounds(&self) -> &Bounds<Geom>;
