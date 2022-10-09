@@ -8,12 +8,20 @@ use node::*;
 /// A quadtree implementation for bounded items (i.e. those with a finite width
 /// and/or height).
 #[derive(Debug)]
-pub struct BoundsQuadTree<T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> {
+pub struct BoundsQuadTree<T, Geom>
+where
+    T: BoundsDatum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     root: BoundsNode<T, Geom>,
     size: usize,
 }
 
-impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> BoundsQuadTree<T, Geom> {
+impl <T, Geom> BoundsQuadTree<T, Geom>
+where
+    T: BoundsDatum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     // Private constructor
     fn private_new(bounds: Bounds<Geom>, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
@@ -26,7 +34,11 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> BoundsQuadTree<T, Geo
     }
 }
 
-impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for BoundsQuadTree<T, Geom> {
+impl <T, Geom> QuadTree<T, Geom> for BoundsQuadTree<T, Geom>
+where
+    T: BoundsDatum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     fn new(bounds: Bounds<Geom>, max_depth: u8, max_children: usize) -> Self {
         BoundsQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
     }
@@ -57,7 +69,13 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
             vec![]
         }
     }
+}
 
+impl<T, Geom> QuadTreeSearch<T, Geom> for BoundsQuadTree<T, Geom>
+where
+    T: BoundsDatum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     fn find<X>(&self, cmp: &X) -> Option<(&T, f64)> 
     where
         X: Distance<Bounds<Geom>> + Distance<T>
@@ -105,7 +123,11 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for
     }
 }
 
-impl <'a, T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a BoundsQuadTree<T, Geom> {
+impl <'a, T, Geom> IntoIterator for &'a BoundsQuadTree<T, Geom>
+where
+    T: BoundsDatum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     type Item = &'a T;
     type IntoIter = QuadTreeIter<'a, T, BoundsNode<T, Geom>, Geom>;
 
@@ -114,7 +136,11 @@ impl <'a, T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for 
     }
 }
 
-impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for BoundsQuadTree<T, Geom> {
+impl <T, Geom> std::fmt::Display for BoundsQuadTree<T, Geom>
+where
+    T: BoundsDatum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Bounds Quadtree Root:")?;
         write!(f, "{}", self.root)

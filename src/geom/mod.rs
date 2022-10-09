@@ -2,8 +2,48 @@
 pub mod euclidean;
 pub mod spherical;
 mod bounds;
+mod g;
 
 use std::marker::PhantomData;
+
+enum Euclid {}
+
+use geo::{self, EuclideanDistance};
+
+use core::ops::Deref;
+struct P2<T> {
+    point: geo::Point<f64>,
+    _geometry: PhantomData<T>,
+}
+
+impl <T> Deref for P2<T> {
+    type Target = geo::Point<f64>;
+    fn deref(&self) -> &Self::Target {
+        &self.point
+    }
+}
+
+impl Distance<P2<Euclid>> for P2<Euclid> {
+    fn dist(&self, cmp: &P2<Euclid>) -> f64 {
+        self.euclidean_distance(&**cmp)
+    }
+}
+
+// TODO: This works, roll out properly
+macro_rules! my_point {
+    ($x:expr, $y:expr) => {
+        P2::<Euclid> { point: geo::Point::new($x, $y), _geometry: PhantomData }
+    };
+    ($x:expr, $y:expr, $geom:ty) => {
+        P2::<$geom> { point: geo::Point::new($x, $y), _geometry: PhantomData }
+    };
+}
+
+fn x() {
+    let p1 = my_point!(1.0, 1.0);
+    let p2 = my_point!(1.0, 2.0);
+    p1.dist(&p2);
+}
 
 // Re-export the coordinate system for easier access
 // Should be the only thing commonly used, everything else can be accessed from

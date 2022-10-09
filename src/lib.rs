@@ -1,4 +1,10 @@
 /*
+ * Quadtree Package.
+ * 
+ * Multiple quadtree implementations for various geometries.
+ * 
+ * TODO: Maybe the best way of doing this overall is to have a trait that replaces the X in find and KNN, there is no other reason why a quadtree needs distance - not required for insert or retrieve
+ *       Then datum is just a point, and bounds datum just needs to be something that can calc a bounding rectangle (the BoundingRect trait)
  * TODO: Force constraints on spherical coords
  * TODO: Should we use Error semantics for insertion? Probably yes
  * TODO: Should this have an integer-with-power-2-bounds version?
@@ -75,7 +81,9 @@ pub trait QuadTree<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
     fn insert(&mut self, datum: T);
 
     fn retrieve(&self, datum: &T) -> Vec<&T>;
+}
 
+pub trait QuadTreeSearch<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
     /// Find the closest datum in the quadtree to the passed comparator.
     /// Returns the datum and the distance to the point in a tuple. The
     /// comparator must implement the Distance trait for Bounds and T.

@@ -5,14 +5,22 @@ use node::*;
 
 /// A quadtree implementation for points.
 #[derive(Debug)]
-pub struct PointQuadTree<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
+pub struct PointQuadTree<T, Geom>
+where
+    T: Datum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     root: PointNode<T, Geom>,
     // Maintain a count for size
     // Could calculate this each time, but it only saves usize memory
     size: usize,
 }
 
-impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> PointQuadTree<T, Geom> {
+impl <T, Geom> PointQuadTree<T, Geom>
+where
+    T: Datum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     // Private constructor
     fn private_new(bounds: Bounds<Geom>, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
@@ -28,7 +36,11 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> PointQuadTree<T, Geom> {
 // TODO: When generalizing behavior...
 // Out of bounds insertion and retrieval behavior is up to the specific
 // implementation, and could even panic if required
-impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for PointQuadTree<T, Geom> {
+impl <T, Geom> QuadTree<T, Geom> for PointQuadTree<T, Geom>
+where
+    T: Datum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     fn new(bounds: Bounds<Geom>, max_depth: u8, max_children: usize) -> Self {
         PointQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
     }
@@ -60,7 +72,13 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for Point
             vec![]
         }
     }
+}
 
+impl<T, Geom> QuadTreeSearch<T, Geom> for PointQuadTree<T, Geom>
+where
+    T: Datum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     fn find<X>(&self, cmp: &X) -> Option<(&T, f64)> 
     where
         X: Distance<Bounds<Geom>> + Distance<T>
@@ -105,7 +123,11 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> QuadTree<T, Geom> for Point
     }
 }
 
-impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a PointQuadTree<T, Geom> {
+impl <'a, T, Geom> IntoIterator for &'a PointQuadTree<T, Geom>
+where
+    T: Datum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     type Item = &'a T;
     type IntoIter = QuadTreeIter<'a, T, PointNode<T, Geom>, Geom>;
 
@@ -114,7 +136,11 @@ impl <'a, T: Datum<Geom>, Geom: System<Geometry = Geom>> IntoIterator for &'a Po
     }
 }
 
-impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for PointQuadTree<T, Geom> {
+impl <T, Geom> std::fmt::Display for PointQuadTree<T, Geom>
+where
+    T: Datum<Geom>,
+    Geom: System<Geometry = Geom>,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Point Quadtree Root:")?;
         write!(f, "{}", self.root)
