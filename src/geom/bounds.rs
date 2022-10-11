@@ -7,16 +7,19 @@ pub struct Bounds<Geom> {
     height: f64,
 }
 
-impl <Geom: System> Bounds<Geom> {
+impl <Geom> Bounds<Geom>
+where
+    Geom: Copy,
+{
     pub fn new(origin: Point<Geom>, width: f64, height: f64) -> Bounds<Geom> {
         Self::from_origin(origin, width, height)
     }
 
     pub fn from_points(a: Point<Geom>, b: Point<Geom>) -> Bounds<Geom> {
-        let x = if a.x < b.x { a.x } else { b.x };
-        let y = if a.y < b.y { a.y } else { b.y };
-        let width = (b.x - a.x).abs();
-        let height = (b.y - a.y).abs();
+        let x = if a.x() < b.x() { a.x() } else { b.x() };
+        let y = if a.y() < b.y() { a.y() } else { b.y() };
+        let width = (b.x() - a.x()).abs();
+        let height = (b.y() - a.y()).abs();
         
         Bounds { origin: Point::new(x, y), width, height }
     }
@@ -34,23 +37,23 @@ impl <Geom: System> Bounds<Geom> {
     }
 
     pub fn x_min(&self) -> f64 {
-        self.origin.x
+        self.origin.x()
     }
 
     pub fn y_min(&self) -> f64 {
-        self.origin.y
+        self.origin.y()
     }
 
     pub fn x_max(&self) -> f64 {
-        self.origin.x + self.width
+        self.origin.x() + self.width
     }
 
     pub fn y_max(&self) -> f64 {
-        self.origin.y + self.height
+        self.origin.y() + self.height
     }
 
     pub fn points(&self) -> [Point<Geom>; 4] {
-        let (x, y) = self.origin.as_tuple();
+        let (x, y) = self.origin.x_y();
 
         [
             Point::new(x, y),
@@ -73,9 +76,9 @@ impl <Geom: System> Bounds<Geom> {
 
     // TODO: Should this be a trait? Then can have multiple implementations - point, segment, bounds
     pub fn contains(&self, pt: Point<Geom>) -> bool {
-        let (x1, y1) = self.origin.as_tuple();
+        let (x1, y1) = self.origin.x_y();
         let (x2, y2) = (x1 + self.width, y1 + self.height);
-        let (x, y) = pt.as_tuple();
+        let (x, y) = pt.x_y();
 
         x >= x1 && x <= x2 && y >= y1 && x <= y2
     }
@@ -102,7 +105,7 @@ impl <Geom: System> Bounds<Geom> {
 
 impl <Geom: System<Geometry = Geom>> Distance<Point<Geom>> for Bounds<Geom> {
     fn dist(&self, cmp: &Point<Geom>) -> f64 {
-        let (x, y) = cmp.as_tuple();
+        let (x, y) = cmp.x_y();
         let [top, right, bottom, left] = self.segments();
         
         if x < self.x_min() { left.dist(cmp) }
@@ -136,19 +139,19 @@ mod tests {
     #[test]
     fn build_euclidean_bounds() {
         // Can construct points either way
-        let p1 = Euclidean::point(0.0, 0.0);
+        let p1 = point!(0.0, 0.0);
         let p2 = Point::<Euclidean>::new(3.0, 4.0);
 
         let b1 = Bounds::new(p1, 1.0, 2.0);
         let b2 = Bounds::from_points(p2, p1);
 
         assert_eq!(
-            b1.points().map(|p| p.as_tuple()),
+            b1.points().map(|p| p.x_y()),
             [(0.0, 0.0), (1.0, 0.0), (1.0, 2.0), (0.0, 2.0)]
         );
 
         assert_eq!(
-            b2.points().map(|p| p.as_tuple()),
+            b2.points().map(|p| p.x_y()),
             [(0.0, 0.0), (3.0, 0.0), (3.0, 4.0), (0.0, 4.0)]
         );
 
@@ -158,26 +161,26 @@ mod tests {
 
         // Also testing the PartialEq
         let segs = b1.segments();
-        assert_eq!(segs[0].a, Point::new(0.0, 0.0));
-        assert_eq!(segs[0].b, Point::new(1.0, 0.0));
+        assert_eq!(segs[0].start_point(), Point::new(0.0, 0.0));
+        assert_eq!(segs[0].end_point(), Point::new(1.0, 0.0));
     }
 
     #[test]
     fn build_spherical_bounds() {
         // Can construct points either way
-        let p1 = Spherical::point(0.0, 0.0);
+        let p1 = point!(0.0, 0.0, Spherical);
         let p2 = Point::<Spherical>::new(PI, -PI / 2.0);
 
         let b1 = Bounds::new(p1, PI / 2.0, PI / 4.0);
         let b2 = Bounds::from_points(p2, p1);
 
         assert_eq!(
-            b1.points().map(|p| p.as_tuple()),
+            b1.points().map(|p| p.x_y()),
             [(0.0, 0.0), (PI / 2.0, 0.0), (PI / 2.0, PI / 4.0), (0.0, PI / 4.0)]
         );
 
         assert_eq!(
-            b2.points().map(|p| p.as_tuple()),
+            b2.points().map(|p| p.x_y()),
             [(0.0, -PI / 2.0), (PI, -PI / 2.0), (PI, 0.0), (0.0, 0.0)]
         );
     }

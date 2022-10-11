@@ -1,34 +1,29 @@
-use std::marker::PhantomData;
 use super::*;
 
 // Iterator implementation for a quadtree
-pub struct QuadTreeIter<'a, D, N, Geom>
+pub struct QuadTreeIter<'a, D, N>
 where
-    D: Datum<Geom>,
-    N: Node<D, Geom>,
-    Geom: System<Geometry = Geom>,
+    D: Datum,
+    N: Node<D>,
 {
     stack: Vec<&'a N>,
     children: Option<Vec<&'a D>>,
-    geom: PhantomData<Geom>,
 }
 
-impl <'a, D, N, Geom> QuadTreeIter<'a, D, N, Geom>
+impl<'a, D, N> QuadTreeIter<'a, D, N>
 where
-    D: Datum<Geom>,
-    N: Node<D, Geom>,
-    Geom: System<Geometry = Geom>,
+    D: Datum,
+    N: Node<D>,
 {
     pub fn new(root: &'a N) -> Self {
-        Self { stack: vec![root], children: None, geom: PhantomData }
+        Self { stack: vec![root], children: None }
     }
 }
 
-impl <'a, D, N, Geom> Iterator for QuadTreeIter<'a, D, N, Geom>
+impl<'a, D, N> Iterator for QuadTreeIter<'a, D, N>
 where
-    D: Datum<Geom>,
-    N: Node<D, Geom>,
-    Geom: System<Geometry = Geom>,
+    D: Datum,
+    N: Node<D>,
 {
     type Item = &'a D;
 

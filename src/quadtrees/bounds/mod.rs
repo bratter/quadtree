@@ -1,6 +1,7 @@
 mod node;
 
 use std::vec;
+use geo::{Rect, Contains};
 
 use crate::*;
 use node::*;
@@ -8,22 +9,20 @@ use node::*;
 /// A quadtree implementation for bounded items (i.e. those with a finite width
 /// and/or height).
 #[derive(Debug)]
-pub struct BoundsQuadTree<T, Geom>
+pub struct BoundsQuadTree<T>
 where
-    T: BoundsDatum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: BoundsDatum,
 {
-    root: BoundsNode<T, Geom>,
+    root: BoundsNode<T>,
     size: usize,
 }
 
-impl <T, Geom> BoundsQuadTree<T, Geom>
+impl<T> BoundsQuadTree<T>
 where
-    T: BoundsDatum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: BoundsDatum,
 {
     // Private constructor
-    fn private_new(bounds: Bounds<Geom>, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
+    fn private_new(bounds: Rect, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
         let max_children = max_children.unwrap_or(DEFAULT_MAX_CHILDREN);
 
@@ -34,16 +33,15 @@ where
     }
 }
 
-impl <T, Geom> QuadTree<T, Geom> for BoundsQuadTree<T, Geom>
+impl<T> QuadTree<T> for BoundsQuadTree<T>
 where
-    T: BoundsDatum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: BoundsDatum,
 {
-    fn new(bounds: Bounds<Geom>, max_depth: u8, max_children: usize) -> Self {
+    fn new(bounds: Rect, max_depth: u8, max_children: usize) -> Self {
         BoundsQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
     }
 
-    fn default(bounds: Bounds<Geom>) -> Self {
+    fn default(bounds: Rect) -> Self {
         BoundsQuadTree::private_new(bounds, None, None)
     }
 
@@ -54,16 +52,16 @@ where
     fn insert(&mut self, datum: T) {
         // Bounds check - discard nodes that are not completely contained
         let qb = self.root.bounds();
-        let db = datum.bounds();
+        let db = &datum.bounds();
 
-        if qb.contains_bounds(db) {
+        if qb.contains(db) {
             self.root.insert(datum);
             self.size += 1;
         }
     }
 
     fn retrieve(&self, datum: &T) -> Vec<&T> {
-        if self.root.bounds().contains_bounds(datum.bounds()) {
+        if self.root.bounds().contains(&datum.bounds()) {
             self.root.retrieve(datum)
         } else {
             vec![]
@@ -71,6 +69,7 @@ where
     }
 }
 
+/* TODO: Commented until dist is fixed
 impl<T, Geom> QuadTreeSearch<T, Geom> for BoundsQuadTree<T, Geom>
 where
     T: BoundsDatum<Geom>,
@@ -122,24 +121,23 @@ where
         knn(&self.root, cmp, k, r)
     }
 }
+*/
 
-impl <'a, T, Geom> IntoIterator for &'a BoundsQuadTree<T, Geom>
+impl<'a, T> IntoIterator for &'a BoundsQuadTree<T>
 where
-    T: BoundsDatum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: BoundsDatum,
 {
     type Item = &'a T;
-    type IntoIter = QuadTreeIter<'a, T, BoundsNode<T, Geom>, Geom>;
+    type IntoIter = QuadTreeIter<'a, T, BoundsNode<T>>;
 
     fn into_iter(self) -> Self::IntoIter {
         QuadTreeIter::new(&self.root)
     }
 }
 
-impl <T, Geom> std::fmt::Display for BoundsQuadTree<T, Geom>
+impl<T> std::fmt::Display for BoundsQuadTree<T>
 where
-    T: BoundsDatum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: BoundsDatum,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Bounds Quadtree Root:")?;
@@ -150,40 +148,33 @@ where
 #[cfg(test)]
 mod tests {
     use std::vec;
+    use geo::{Point, Rect};
 
     use super::*;
 
-    // Set up Bounds to act as a BoundsDatum
-    impl Datum<Euclidean> for Bounds<Euclidean> {
-        fn point(&self) -> Point<Euclidean> {
-            Euclidean::point(self.x_min(), self.y_min())
+    // Set up Rect to act as a BoundsDatum
+    impl Datum for Rect {
+        fn point(&self) -> Point {
+            Point::from(self.min())
         }
     }
 
-    impl BoundsDatum<Euclidean> for Bounds<Euclidean> {
-        fn bounds(&self) -> Bounds<Euclidean> {
-            self.clone()
-        }
-    }
-
-    impl PartialEq for Bounds<Euclidean> {
-        fn eq(&self, other: &Self) -> bool {
-            self.point() == other.point()
-            && self.height() == other.height()
-            && self.width() == other.width()
+    impl BoundsDatum for Rect {
+        fn bounds(&self) -> Rect {
+            *self
         }
     }
 
     // helper function for bounds datum creation
-    fn b(x: f64, y: f64, w: f64, h: f64) -> Bounds<Euclidean> {
-        Bounds::new(Euclidean::point(x, y), w, h)
+    fn b(x: f64, y: f64, w: f64, h: f64) -> Rect {
+        Rect::new(coord! {x: x, y: y}, coord! {x: x + w, y: y + h})
     }
 
     #[test]
     #[allow(unused_variables)]
     fn retrieve_grabs_all_in_overlapping_bounds() {
-        let origin = Euclidean::point(0.0, 0.0);
-        let bounds = Bounds::new(origin, 8.0, 8.0);
+        let origin = Point::new(0.0, 0.0);
+        let bounds = Rect::new(origin.0, coord! {x: 8.0, y: 8.0});
         let mut qt = BoundsQuadTree::new(bounds, 2, 2);
 
         // In root[TL][TL]

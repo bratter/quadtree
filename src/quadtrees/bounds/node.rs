@@ -1,18 +1,19 @@
+use geo::{Rect, Contains, Intersects};
 use crate::*;
 
 #[derive(Debug)]
-pub struct BoundsNode<T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> {
-    bounds: Bounds<Geom>,
+pub struct BoundsNode<T: BoundsDatum> {
+    bounds: Rect,
     depth: u8,
     max_depth: u8,
     max_children: usize,
     pub children: Vec<T>,
     pub stuck_children: Vec<T>,
-    pub nodes: Option<Box<[BoundsNode<T, Geom>; 4]>>,
+    pub nodes: Option<Box<[BoundsNode<T>; 4]>>,
 }
 
-impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for BoundsNode<T, Geom> {
-    fn new(bounds: Bounds<Geom>, depth: u8, max_depth: u8, max_children: usize) -> Self {
+impl<T: BoundsDatum> Node<T> for BoundsNode<T> {
+    fn new(bounds: Rect, depth: u8, max_depth: u8, max_children: usize) -> Self {
         Self {
             bounds,
             depth,
@@ -25,7 +26,7 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for Bou
     }
 
     // Getters
-    fn bounds(&self) -> &Bounds<Geom> { &self.bounds }
+    fn bounds(&self) -> &Rect { &self.bounds }
     fn depth(&self) -> u8 { self.depth }
     fn max_depth(&self) -> u8 { self.max_depth }
     fn max_children(&self) -> usize { self.max_children }
@@ -50,7 +51,7 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for Bou
 
                 // Now check if the datum is totally contained by the sub-node
                 // If not, it is a stuck child
-                if sub_node.bounds().contains_bounds(datum.bounds()) {
+                if sub_node.bounds().contains(&datum.bounds()) {
                     sub_node.insert(datum)
                 } else {
                     self.stuck_children.push(datum);
@@ -81,14 +82,14 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for Bou
             Some(nodes) => {
                 let sub_node = &nodes[self.find_sub_node(datum) as usize];
 
-                if sub_node.bounds().contains_bounds(datum.bounds()) {
+                if sub_node.bounds().contains(&datum.bounds()) {
                     sub_node.retrieve(datum)
                 } else {
                     let mut inner = vec![];
                     // Return the entire contents of any overlapping node
                     // Same semantics as https://github.com/mikechambers/ExamplesByMesh/blob/master/JavaScript/QuadTree/src/QuadTree.js
                     for sub_node in &**nodes {
-                        if sub_node.bounds().bounds_overlap(datum.bounds()) {
+                        if sub_node.bounds().intersects(&datum.bounds()) {
                             inner.extend(get_all_children(sub_node));
                         }
                     }
@@ -106,7 +107,7 @@ impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for Bou
     }
 }
 
-impl <T: BoundsDatum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for BoundsNode<T, Geom> {
+impl<T: BoundsDatum> std::fmt::Display for BoundsNode<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display(f)
     }

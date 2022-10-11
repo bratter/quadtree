@@ -1,28 +1,27 @@
 mod node;
 
+use geo::{Rect, Contains};
 use crate::*;
 use node::*;
 
 /// A quadtree implementation for points.
 #[derive(Debug)]
-pub struct PointQuadTree<T, Geom>
+pub struct PointQuadTree<T>
 where
-    T: Datum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: Datum,
 {
-    root: PointNode<T, Geom>,
+    root: PointNode<T>,
     // Maintain a count for size
     // Could calculate this each time, but it only saves usize memory
     size: usize,
 }
 
-impl <T, Geom> PointQuadTree<T, Geom>
+impl<T> PointQuadTree<T>
 where
-    T: Datum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: Datum,
 {
     // Private constructor
-    fn private_new(bounds: Bounds<Geom>, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
+    fn private_new(bounds: Rect, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
         let max_children = max_children.unwrap_or(DEFAULT_MAX_CHILDREN);
 
@@ -36,16 +35,15 @@ where
 // TODO: When generalizing behavior...
 // Out of bounds insertion and retrieval behavior is up to the specific
 // implementation, and could even panic if required
-impl <T, Geom> QuadTree<T, Geom> for PointQuadTree<T, Geom>
+impl<T> QuadTree<T> for PointQuadTree<T>
 where
-    T: Datum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: Datum,
 {
-    fn new(bounds: Bounds<Geom>, max_depth: u8, max_children: usize) -> Self {
+    fn new(bounds: Rect, max_depth: u8, max_children: usize) -> Self {
         PointQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
     }
 
-    fn default(bounds: Bounds<Geom>) -> Self {
+    fn default(bounds: Rect) -> Self {
         PointQuadTree::private_new(bounds, None, None)
     }
 
@@ -57,7 +55,7 @@ where
     // Here we assume that `root.insert` always succeeds so we can increment
     // count. This should work if the pt is in bounds
     fn insert(&mut self, pt: T) {
-        if self.root.bounds().contains(pt.point()) {
+        if self.root.bounds().contains(&pt.point()) {
             self.root.insert(pt);
             self.size += 1;
         }
@@ -66,7 +64,7 @@ where
     fn retrieve(&self, pt: &T) -> Vec<&T> {
         // Bounds check first - capturing out of bounds here
         // This trusts the Node implementation to act correctly
-        if self.root.bounds().contains(pt.point()) {
+        if self.root.bounds().contains(&pt.point()) {
             self.root.retrieve(pt)
         } else {
             vec![]
@@ -74,6 +72,7 @@ where
     }
 }
 
+/* TODO: Commented until dist is fixed
 impl<T, Geom> QuadTreeSearch<T, Geom> for PointQuadTree<T, Geom>
 where
     T: Datum<Geom>,
@@ -122,24 +121,23 @@ where
         knn(&self.root, cmp, k, r)
     }
 }
+*/
 
-impl <'a, T, Geom> IntoIterator for &'a PointQuadTree<T, Geom>
+impl<'a, T> IntoIterator for &'a PointQuadTree<T>
 where
-    T: Datum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: Datum,
 {
     type Item = &'a T;
-    type IntoIter = QuadTreeIter<'a, T, PointNode<T, Geom>, Geom>;
+    type IntoIter = QuadTreeIter<'a, T, PointNode<T>>;
 
     fn into_iter(self) -> Self::IntoIter {
         QuadTreeIter::new(&self.root)
     }
 }
 
-impl <T, Geom> std::fmt::Display for PointQuadTree<T, Geom>
+impl<T> std::fmt::Display for PointQuadTree<T>
 where
-    T: Datum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: Datum,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Point Quadtree Root:")?;
@@ -149,22 +147,25 @@ where
 
 #[cfg(test)]
 mod tests {
+    use geo::Point;
+
     use super::*;
 
     // We can use Point directly, or make our own wrapper
     #[derive(Debug, Clone, Copy, PartialEq)]
     struct MyData(f64, f64);
 
-    impl Datum<Euclidean> for MyData {
-        fn point(&self) -> Point<Euclidean> {
+    impl Datum for MyData {
+        fn point(&self) -> Point {
             Point::new(self.0, self.1)
         }
     }
 
     #[test]
     fn subdivide_occurs_at_max_children() {
-        let origin = Point::new(0.0, 0.0);
-        let mut qt = PointQuadTree::default(Bounds::new(origin, 1.0, 1.0));
+        let origin: Point = Point::new(0.0, 0.0);
+        let bounds = Rect::new(origin.0, coord!(x: 1.0, y: 1.0));
+        let mut qt = PointQuadTree::default(bounds);
         
         // Using a data wrapper here
         let pt1 = MyData(0.1, 0.1);
@@ -209,9 +210,9 @@ mod tests {
 
     #[test]
     fn can_change_max_depth_and_max_children_and_subdivide_stops_at_max_depth() {
-        let origin = Point::new(0.0, 0.0);
+        let origin: Point = Point::new(0.0, 0.0);
         let mut qt = PointQuadTree::new(
-            Bounds::new(origin, 1.0, 1.0),
+            Rect::new(origin.0, coord! { x: 1.0, y: 1.0 }),
             2,
             2,
         );

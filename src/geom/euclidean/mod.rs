@@ -9,11 +9,11 @@ impl System for Euclidean {
     type Geometry = Euclidean;
 
     fn dist_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64 {
-        math::dist_pt_pt(p1.as_tuple(), p2.as_tuple())
+        math::dist_pt_pt(p1.x_y(), p2.x_y())
     }
 
     fn dist_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
-        math::dist_pt_line(pt.as_tuple(), line.a.as_tuple(), line.b.as_tuple())
+        math::dist_pt_line(pt.x_y(), line.start_point().x_y(), line.end_point().x_y())
     }
 
     fn dist_bounds_bounds(b1: &Bounds<Self::Geometry>, b2: &Bounds<Self::Geometry>) -> f64 {
@@ -52,25 +52,25 @@ mod tests {
 
     #[test]
     fn can_construct_points_and_line_segments() {
-        let p1 = Euclidean::point(0.0, 0.0);
-        let p2 = Euclidean::point(3.0, 4.0);
+        let p1 = point!(0.0, 0.0, Euclidean);
+        let p2 = point!(3.0, 4.0);
 
-        let seg = Euclidean::segment(p1, p2);
+        let seg = segment!(p1, p2, Euclidean);
 
-        assert_eq!(p1.as_tuple(), (0.0, 0.0));
-        assert_eq!(p2.as_tuple(), (3.0, 4.0));
+        assert_eq!(p1.x_y(), (0.0, 0.0));
+        assert_eq!(p2.x_y(), (3.0, 4.0));
 
-        assert_eq!(seg.a.as_tuple(), (0.0, 0.0));
-        assert_eq!(seg.b.as_tuple(), (3.0, 4.0));
+        assert_eq!(seg.start_point().x_y(), (0.0, 0.0));
+        assert_eq!(seg.end_point().x_y(), (3.0, 4.0));
     }
 
     #[test]
     fn calculate_pt_pt_and_pt_segment_distance() {
-        let p1 = Euclidean::point(0.0, 0.0);
-        let p2 = Euclidean::point(3.0, 4.0);
-        let p3 = Euclidean::point(3.0, 0.0);
+        let p1 = point!(0.0, 0.0);
+        let p2 = point!(3.0, 4.0);
+        let p3 = point!(3.0, 0.0);
 
-        let seg = Euclidean::segment(p1, p3);
+        let seg = segment!(p1, p3);
 
         assert_eq!(p1.dist(&p2), 5.0);
 

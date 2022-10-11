@@ -1,17 +1,18 @@
+use geo::Rect;
 use crate::*;
 
 #[derive(Debug)]
-pub struct PointNode<T: Datum<Geom>, Geom: System<Geometry = Geom>> {
-    bounds: Bounds<Geom>,
+pub struct PointNode<T: Datum> {
+    bounds: Rect,
     depth: u8,
     max_depth: u8,
     max_children: usize,
     pub children: Vec<T>,
-    pub nodes: Option<Box<[PointNode<T, Geom>; 4]>>,
+    pub nodes: Option<Box<[PointNode<T>; 4]>>,
 }
 
-impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for PointNode<T, Geom> {
-    fn new(bounds: Bounds<Geom>, depth: u8, max_depth: u8, max_children: usize) -> Self {
+impl<T: Datum> Node<T> for PointNode<T> {
+    fn new(bounds: Rect, depth: u8, max_depth: u8, max_children: usize) -> Self {
         Self {
             bounds,
             depth,
@@ -23,12 +24,12 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for PointNode
     }
 
     // Getters
-    fn bounds(&self) -> &Bounds<Geom> { &self.bounds }
+    fn bounds(&self) -> &Rect { &self.bounds }
     fn depth(&self) -> u8 { self.depth }
     fn max_depth(&self) -> u8 { self.max_depth }
     fn max_children(&self) -> usize { self.max_children }
     fn children(&self) -> Vec<&T> { self.children.iter().collect() }
-    fn nodes(&self) -> &Option<Box<[PointNode<T, Geom>; 4]>> { &self.nodes }
+    fn nodes(&self) -> &Option<Box<[PointNode<T>; 4]>> { &self.nodes }
 
     // Setters
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
@@ -83,7 +84,7 @@ impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> Node<T, Geom> for PointNode
     }
 }
 
-impl <T: Datum<Geom>, Geom: System<Geometry = Geom>> std::fmt::Display for PointNode<T, Geom> {
+impl<T: Datum> std::fmt::Display for PointNode<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display(f)
     }

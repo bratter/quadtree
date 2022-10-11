@@ -1,3 +1,4 @@
+use geo::Rect;
 use super::*;
 
 pub enum SubNode {
@@ -7,13 +8,14 @@ pub enum SubNode {
     BottomLeft = 3,
 }
 
-pub trait Node <T: Datum<Geom>, Geom: System<Geometry = Geom>>
+pub trait Node <T>
 where
+    T: Datum,
     Self: Sized
 {
-    fn new(bounds: Bounds<Geom>, depth: u8, max_depth: u8, max_children: usize) -> Self;
+    fn new(bounds: Rect, depth: u8, max_depth: u8, max_children: usize) -> Self;
 
-    fn bounds(&self) -> &Bounds<Geom>;
+    fn bounds(&self) -> &Rect;
 
     fn depth(&self) -> u8;
 
@@ -36,10 +38,10 @@ where
     fn retrieve(&self, datum: &T) -> Vec<&T>;
 
     fn find_sub_node(&self, datum: &T) -> SubNode {
-        let (x, y) = datum.point().as_tuple();
-        let b = &self.bounds();
-        let left = x <= b.x_min() + b.width() / 2.0;
-        let top = y <= b.y_min() + b.height() / 2.0;
+        let (x, y) = datum.point().x_y();
+        let center = self.bounds().center();
+        let left = x <= center.x;
+        let top = y <= center.y;
 
         if left && top { SubNode::TopLeft }
         else if !left && top { SubNode::TopRight }
@@ -56,20 +58,22 @@ where
         let wh = bounds.width() / 2.0;
         let hh = bounds.height() / 2.0;
         
-        let (x1, y1) = (bounds.x_min(), bounds.y_min());
+        let (x1, y1) = bounds.min().x_y();
         let (x2, y2) = (x1 + wh, y1 + hh);
+        let (x3, y3) = bounds.max().x_y();
 
         // Fixed order of iteration tl, tr, br, bl
         self.set_nodes(Some(Box::new([
-            Self::new(Bounds::new(Point::new(x1, y1), wh, hh), depth, md, mc),
-            Self::new(Bounds::new(Point::new(x2, y1), wh, hh), depth, md, mc),
-            Self::new(Bounds::new(Point::new(x2, y2), wh, hh), depth, md, mc),
-            Self::new(Bounds::new(Point::new(x1, y2), wh, hh), depth, md, mc),
+            Self::new(Rect::new(coord! {x: x1, y: y1}, coord! {x: x2, y: y2}), depth, md, mc),
+            Self::new(Rect::new(coord! {x: x2, y: y1}, coord! {x: x3, y: y2}), depth, md, mc),
+            Self::new(Rect::new(coord! {x: x2, y: y2}, coord! {x: x3, y: y3}), depth, md, mc),
+            Self::new(Rect::new(coord! {x: x1, y: y2}, coord! {x: x2, y: y3}), depth, md, mc),
         ])));
     }
 
     fn display(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let indent = " ".repeat(self.depth() as usize * 4);
+        let min = self.bounds().min();
         let count = self.children().len();
         let children = if count == 0 {
             "".to_owned()
@@ -79,7 +83,7 @@ where
             format!(" {count} children")
         };
 
-        writeln!(f, "{indent}({:.2}, {:.2}):{children}", self.bounds().x_min(), self.bounds().y_min())?;
+        writeln!(f, "{indent}({:.2}, {:.2}):{children}", min.x, min.y)?;
 
         if let Some(nodes) = &self.nodes() {
             for node in &**nodes {
@@ -91,7 +95,11 @@ where
 }
 
 // TODO: Better to implement as iter on Node?
-pub fn get_all_children<N: Node<T, Geom>, T: Datum<Geom>, Geom: System<Geometry = Geom>>(node: &N) -> Vec<&T> {
+pub fn get_all_children<N, T>(node: &N) -> Vec<&T>
+where
+    N: Node<T>,
+    T: Datum,
+{
     let mut children = node.children();
 
     if let Some(nodes) = node.nodes() {

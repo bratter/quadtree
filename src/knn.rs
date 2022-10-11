@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 
 enum KnnType<'a, NodeType, T, Geom>
 where
-    NodeType: Node<T, Geom>,
-    T: Datum<Geom>,
+    NodeType: Node<T>,
+    T: Datum,
     Geom: System<Geometry = Geom>,
 {
     Node(&'a NodeType),
@@ -12,6 +12,7 @@ where
     _Geom(PhantomData<Geom>),
 }
 
+/* TODO: Remove knn implementation until dist is sorted
 // Private, general, knn function implementation that takes an explcit node
 // This gets around forcing Node to be object safe and doing priv-in-pub to
 // get access to the root node, as root is just passed here.
@@ -75,3 +76,4 @@ where
         }
     }
 }
+*/

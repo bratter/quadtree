@@ -10,11 +10,11 @@ impl System for Spherical {
     type Geometry = Spherical;
 
     fn dist_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64 {
-        dist_pt_pt(p1.as_tuple(), p2.as_tuple())
+        dist_pt_pt(p1.x_y(), p2.x_y())
     }
 
     fn dist_pt_line(pt: &Point<Self::Geometry>, line: &Segment<Self::Geometry>) -> f64 {
-        dist_pt_line(pt.as_tuple(), line.a.as_tuple(), line.b.as_tuple())
+        dist_pt_line(pt.x_y(), line.start_point().x_y(), line.end_point().x_y())
     }
 
     // Calculate Spherical bounds distances.
@@ -99,27 +99,27 @@ mod tests {
 
     #[test]
     fn can_construct_points_and_line_segments() {
-        let p1 = Spherical::point(0.0, 0.0);
-        let p2 = Spherical::point(3.0, 4.0);
+        let p1 = point!(0.0, 0.0, Spherical);
+        let p2 = point!(3.0, 4.0, Spherical);
 
-        let seg = Spherical::segment(p1, p2);
+        let seg = segment!(p1, p2, Spherical);
 
-        assert_eq!(p1.as_tuple(), (0.0, 0.0));
-        assert_eq!(p2.as_tuple(), (3.0, 4.0));
+        assert_eq!(p1.x_y(), (0.0, 0.0));
+        assert_eq!(p2.x_y(), (3.0, 4.0));
 
-        assert_eq!(seg.a.as_tuple(), (0.0, 0.0));
-        assert_eq!(seg.b.as_tuple(), (3.0, 4.0));
+        assert_eq!(seg.start_point().x_y(), (0.0, 0.0));
+        assert_eq!(seg.end_point().x_y(), (3.0, 4.0));
     }
 
     #[test]
     fn calculate_pt_pt_and_pt_segment_distance() {
         // Create directly in radians
-        let p1 = Spherical::point(0.0, 0.0);
+        let p1 = point!(0.0, 0.0, Spherical);
         // Create from degrees
         let p2 = Point::from_deg(180.0, 0.0);
-        let p3 = Spherical::point(PI, PI / 2.0);
+        let p3 = point!(PI, PI / 2.0, Spherical);
 
-        let seg = Spherical::segment(p1, p2);
+        let seg = segment!(p1, p2, Spherical);
 
         assert_eq!(p1.dist(&p2), PI);
         assert_eq!(p2.dist(&p1), PI);
@@ -133,13 +133,13 @@ mod tests {
     #[test]
     fn distance_calc_wraps_lng_bounds() {
         // They equal each other
-        let p1 = Spherical::point(7.0 * FRAC_PI_8, 0.0);
-        let p2 = Spherical::point(-7.0 * FRAC_PI_8, 0.0);
+        let p1 = point!(7.0 * FRAC_PI_8, 0.0, Spherical);
+        let p2 = point!(-7.0 * FRAC_PI_8, 0.0, Spherical);
         assert_eq!(p1.dist(&p2), p2.dist(&p1));
 
         // They equal something that doesn't wrap
-        let p3 = Spherical::point(0.0, 0.0);
-        let p4 = Spherical::point(FRAC_PI_4, 0.0);
+        let p3 = point!(0.0, 0.0, Spherical);
+        let p4 = point!(FRAC_PI_4, 0.0, Spherical);
         assert!(p1.dist(&p2) - p3.dist(&p4) < EPSILON);
     }
 
@@ -147,75 +147,75 @@ mod tests {
     fn bounds_dist_works_for_simple_bounds() {
         // 0.4 is approx pi/8
         let b1 = Bounds::new(
-            Spherical::point(0.1, -0.1),
+            point!(0.1, -0.1, Spherical),
             0.4,
             0.5,
         );
 
         // Test an overlap
-        let b2 = Bounds::new(Spherical::point(0.2, 0.0), 0.8, 0.8);
+        let b2 = Bounds::new(point!(0.2, 0.0, Spherical), 0.8, 0.8);
         assert_eq!(b1.dist(&b2), 0.0);
         
         // Test touching
-        let b2 = Bounds::new(Spherical::point(0.4, 0.0), 0.2, 0.2);
+        let b2 = Bounds::new(point!(0.4, 0.0, Spherical), 0.2, 0.2);
         assert_eq!(b1.dist(&b2), 0.0);
 
         // Test lat above - simple as the distance should just be the delta in radians
-        let b2 = Bounds::new(Spherical::point(0.1, 0.6), 0.2, 0.2);
+        let b2 = Bounds::new(point!(0.1, 0.6, Spherical), 0.2, 0.2);
         assert!(b1.dist(&b2) - 0.2 < EPSILON);
 
         // Test lat below
-        let b2 = Bounds::new(Spherical::point(0.1, -0.4), 0.2, 0.1);
+        let b2 = Bounds::new(point!(0.1, -0.4, Spherical), 0.2, 0.1);
         assert!(b1.dist(&b2) - 0.3 < EPSILON);
 
         // Test lng greater than, min dist @ 0.4, b2 ends higher
-        let b2 = Bounds::new(Spherical::point(0.6, 0.2), 0.2, 0.4);
-        let d = Spherical::point(0.5, 0.4).dist(&Spherical::point(0.6, 0.4));
+        let b2 = Bounds::new(point!(0.6, 0.2, Spherical), 0.2, 0.4);
+        let d = point!(0.5, 0.4, Spherical).dist(&point!(0.6, 0.4, Spherical));
         assert!(b1.dist(&b2) - d < EPSILON);
         
         // Test lng greater than, min dist @ -0.1, b2 starts lower
-        let b2 = Bounds::new(Spherical::point(0.7, -0.2), 0.1, 0.1);
-        let d = Spherical::point(0.5, -0.1).dist(&Spherical::point(0.7, -0.1));
+        let b2 = Bounds::new(point!(0.7, -0.2, Spherical), 0.1, 0.1);
+        let d = point!(0.5, -0.1, Spherical).dist(&point!(0.7, -0.1, Spherical));
         assert!(b1.dist(&b2) - d < EPSILON);
 
         // Test lng less than - min dist @ 0.3, b1 ends higher
-        let b2 = Bounds::new(Spherical::point(-0.2, 0.0), 0.1, 0.3);
-        let d = Spherical::point(0.1, 0.3).dist(&Spherical::point(-0.1, 0.3));
+        let b2 = Bounds::new(point!(-0.2, 0.0, Spherical), 0.1, 0.3);
+        let d = point!(0.1, 0.3, Spherical).dist(&point!(-0.1, 0.3, Spherical));
         assert!(b1.dist(&b2) - d < EPSILON);
         
         // Test corner - top left
-        let b2 = Bounds::new(Spherical::point(-0.2, -0.3), 0.1, 0.1);
-        let d = Spherical::point(0.1, -0.1).dist(&Spherical::point(-0.1, -0.2));
+        let b2 = Bounds::new(point!(-0.2, -0.3, Spherical), 0.1, 0.1);
+        let d = point!(0.1, -0.1, Spherical).dist(&point!(-0.1, -0.2, Spherical));
         assert!(b1.dist(&b2) - d < EPSILON);
 
         // Test corner - top right
-        let b2 = Bounds::new(Spherical::point(0.8, -0.4), 0.1, 0.1);
-        let d = Spherical::point(0.5, -0.1).dist(&Spherical::point(0.8, -0.3));
+        let b2 = Bounds::new(point!(0.8, -0.4, Spherical), 0.1, 0.1);
+        let d = point!(0.5, -0.1, Spherical).dist(&point!(0.8, -0.3, Spherical));
         assert!(b1.dist(&b2) - d < EPSILON);
 
         // Test corner - bottom right
-        let b2 = Bounds::new(Spherical::point(0.9, 0.6), 0.1, 0.1);
-        let d = Spherical::point(0.5, 0.4).dist(&Spherical::point(0.9, 0.6));
+        let b2 = Bounds::new(point!(0.9, 0.6, Spherical), 0.1, 0.1);
+        let d = point!(0.5, 0.4, Spherical).dist(&point!(0.9, 0.6, Spherical));
         assert!(b1.dist(&b2) - d < EPSILON);
 
         // Test corner - bottom left
-        let b2 = Bounds::new(Spherical::point(-0.8, 0.7), 0.2, 0.1);
-        let d = Spherical::point(0.1, 0.4).dist(&Spherical::point(-0.6, 0.7));
+        let b2 = Bounds::new(point!(-0.8, 0.7, Spherical), 0.2, 0.1);
+        let d = point!(0.1, 0.4, Spherical).dist(&point!(-0.6, 0.7, Spherical));
         assert!(b1.dist(&b2) - d < EPSILON);
     }
     
     #[test]
     fn bounds_dist_works_when_on_other_side_of_antimeridian() {
-        let b1 = Bounds::new(Spherical::point(2.9, 0.0), 0.1, 0.4);
+        let b1 = Bounds::new(point!(2.9, 0.0, Spherical), 0.1, 0.4);
 
         // Test overlapping latitude
-        let b2 = Bounds::new(Spherical::point(-3.0, 0.1), 0.1, 0.2);
-        let d = Spherical::point(3.0, 0.3).dist(&Spherical::point(-3.0, 0.3));
+        let b2 = Bounds::new(point!(-3.0, 0.1, Spherical), 0.1, 0.2);
+        let d = point!(3.0, 0.3, Spherical).dist(&point!(-3.0, 0.3, Spherical));
         assert!(b1.dist(&b2) - d < EPSILON);
 
         // Test corner
-        let b2 = Bounds::new(Spherical::point(-2.8, -0.4), 0.1, 0.2);
-        let d = Spherical::point(3.0, 0.0).dist(&Spherical::point(-2.8, 0.2));
+        let b2 = Bounds::new(point!(-2.8, -0.4, Spherical), 0.1, 0.2);
+        let d = point!(3.0, 0.0, Spherical).dist(&point!(-2.8, 0.2, Spherical));
         assert!(b1.dist(&b2) - d < EPSILON);
     }
 }

@@ -36,7 +36,7 @@ impl Distance<Point<Spherical>> for Point<Spherical> {
 }
 
 // TODO: Move to macros module
-macro_rules! point {
+macro_rules! _point {
     ($x:expr, $y:expr) => {
         Point::<Euclidean> { point: geo::Point::new($x, $y), _geometry: PhantomData }
     };
@@ -51,6 +51,6 @@ mod tests {
 
     #[test]
     fn x() {
-        let origin = point!(0.0, 0.0);
+        let _origin = _point!(0.0, 0.0);
     }
 }
