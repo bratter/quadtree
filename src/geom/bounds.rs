@@ -1,3 +1,5 @@
+use geo::Line;
+
 use super::*;
 
 #[derive(Debug, Clone)]
@@ -63,14 +65,14 @@ where
         ]
     }
 
-    pub fn segments(&self) -> [Segment<Geom>; 4] {
+    pub fn segments(&self) -> [Line; 4] {
         let [tl, tr, br, bl] = self.points();
 
         [
-            Segment::new(tl, tr),
-            Segment::new(tr, br),
-            Segment::new(br, bl),
-            Segment::new(bl, tl),
+            Line::new(tl.0, tr.0),
+            Line::new(tr.0, br.0),
+            Line::new(br.0, bl.0),
+            Line::new(bl.0, tl.0),
         ]
     }
 
@@ -131,6 +133,7 @@ impl <Geom: System<Geometry = Geom>> Distance<Bounds<Geom>> for Bounds<Geom> {
 #[cfg(test)]
 mod tests {
     use std::f64::consts::PI;
+    use geo;
 
     use super::*;
     use euclidean::*;
@@ -161,8 +164,8 @@ mod tests {
 
         // Also testing the PartialEq
         let segs = b1.segments();
-        assert_eq!(segs[0].start_point(), Point::new(0.0, 0.0));
-        assert_eq!(segs[0].end_point(), Point::new(1.0, 0.0));
+        assert_eq!(segs[0].start_point(), geo::Point::new(0.0, 0.0));
+        assert_eq!(segs[0].end_point(), geo::Point::new(1.0, 0.0));
     }
 
     #[test]

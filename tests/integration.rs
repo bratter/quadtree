@@ -1,4 +1,4 @@
-use geo::{Point, Rect};
+use geo::{Point, Rect, Line, HaversineDistance};
 use quadtree::*;
 use quadtree::geom::*;
 
@@ -80,17 +80,16 @@ fn iterator_runs_preorder() {
     assert_eq!(vec.len(), 6);
 }
 
-/* TODO: Comment all find/knn tests until fixed
 #[test]
 fn find_returns_closest_in_eucildean_for_point_qt() {
-    let origin = point!(0.0, 0.0, Euclidean);
-    let bounds = Bounds::new(origin, 1.0, 1.0);
+    let origin = Point::new(0.0, 0.0);
+    let bounds = Rect::new(origin.0, coord!(x: 1.0, y: 1.0));
     let mut qt = PointQuadTree::new(bounds, 2, 2);
 
-    let p1 = point!(0.4, 0.2);
-    let p2 = point!(0.2, 0.4);
-    let p3 = point!(0.1, 0.1);
-    let p4 = point!(0.8, 0.8);
+    let p1 = Point::new(0.4, 0.2);
+    let p2 = Point::new(0.2, 0.4);
+    let p3 = Point::new(0.1, 0.1);
+    let p4 = Point::new(0.8, 0.8);
 
     qt.insert(p1.clone());
     qt.insert(p2.clone());
@@ -98,21 +97,20 @@ fn find_returns_closest_in_eucildean_for_point_qt() {
     qt.insert(p4.clone());
     qt.insert(p4.clone());
 
-    // Make this slightly closer to the x axis
-    let cmp = point!(0.4, 0.39);
+    let cmp = Eucl::new(Point::new(0.4, 0.39));
     assert_eq!(qt.find(&cmp).unwrap(), (&p1, 0.19));
 }
 
 #[test]
 fn find_returns_closest_in_spherical_for_point_qt() {
-    let origin = point!(0.0, 0.0, Spherical);
-    let bounds = Bounds::new(origin, 1.0, 1.0);
+    let origin = Point::new(0.0, 0.0);
+    let bounds = Rect::new(origin.0, coord!(x: 1.0, y: 1.0));
     let mut qt = PointQuadTree::new(bounds, 2, 2);
 
-    let p1 = point!(0.4, 0.2, Spherical);
-    let p2 = point!(0.2, 0.4, Spherical);
-    let p3 = point!(0.1, 0.1, Spherical);
-    let p4 = point!(0.8, 0.8, Spherical);
+    let p1 = Point::new(0.4, 0.2);
+    let p2 = Point::new(0.2, 0.4);
+    let p3 = Point::new(0.1, 0.1);
+    let p4 = Point::new(0.8, 0.8);
 
     qt.insert(p1.clone());
     qt.insert(p2.clone());
@@ -122,55 +120,32 @@ fn find_returns_closest_in_spherical_for_point_qt() {
 
     // Make this slightly closer to the x axis
     // Then in spherical the distance is closer to the other point
-    let cmp = point!(0.4, 0.39, Spherical);
+    // TODO: Sph needs new method and haversine dist needs to be implemented
+    let cmp = Sph::new(Point::new(0.4, 0.39));
     let (p, d) = qt.find(&cmp).unwrap();
     assert_eq!(p, &p2);
-    assert!((d - cmp.dist(&p2)).abs() < EPSILON);
+    assert!((d - cmp.haversine_distance(&p2)).abs() < EPSILON);
 }
 
-// Make a segment into a bounds datum
-#[derive(Debug, Clone, PartialEq)]
-struct SegE(Segment<Euclidean>);
-impl SegE {
-    fn new(x1: f64, y1: f64, x2: f64, y2: f64) -> Self {
-        SegE(segment!(point!(x1, y1), point!(x2, y2)))
-    }
-}
-
-impl Datum<Euclidean> for SegE {
-    fn point(&self) -> Point<Euclidean> {
-        self.0.a()
-    }
-}
-
-impl BoundsDatum<Euclidean> for SegE {
-    fn bounds(&self) -> Bounds<Euclidean> {
-        Bounds::from_points(self.0.a(), self.0.b())
-    }
-}
-
-impl SearchDatum<SegE, Euclidean> for Point<Euclidean> {}
-
-impl Distance<SegE> for Point<Euclidean> {
-    fn dist(&self, cmp: &SegE) -> f64 {
-        self.dist(&cmp.0)
-    }
+/// Helper function to construct a line segment.
+fn line(x1: f64, y1: f64, x2: f64, y2: f64) -> Line<f64> {
+    Line::new(coord! {x: x1, y: y1}, coord! {x:x2, y: y2})
 }
 
 #[test]
 fn find_returns_closest_in_euclidean_for_segments_in_bounds_qt() {
-    let origin = point!(0.0, 0.0);
-    let bounds = Bounds::new(origin, 1.0, 1.0);
+    let origin = Point::new(0.0, 0.0);
+    let bounds = Rect::new(origin.0, coord! {x: 1.0, y: 1.0});
     let mut qt = BoundsQuadTree::new(bounds, 2, 2);
 
     // Will be stuck in TL at the second level
-    let d1 = SegE::new(0.3, 0.0, 0.0, 0.4);
-    let d2 = SegE::new(0.0, 0.0, 0.0, 0.4);
-    let d3 = SegE::new(0.0, 0.0, 0.3, 0.0);
+    let d1 = line(0.3, 0.0, 0.0, 0.4);
+    let d2 = line(0.0, 0.0, 0.0, 0.4);
+    let d3 = line(0.0, 0.0, 0.3, 0.0);
     // Will be stuck in root
-    let d4 = SegE::new(0.6, 0.0, 0.0, 0.8);
+    let d4 = line(0.6, 0.0, 0.0, 0.8);
     // In the TR
-    let d5 = SegE::new(0.9, 0.8, 0.9, 0.9);
+    let d5 = line(0.9, 0.8, 0.9, 0.9);
 
     qt.insert(d1.clone());
     qt.insert(d2.clone());
@@ -179,11 +154,12 @@ fn find_returns_closest_in_euclidean_for_segments_in_bounds_qt() {
     qt.insert(d5.clone());
 
     // Closer to the y-axis
-    let cmp = point!(0.05, 0.1);
+    // TODO: Need to implement the right distances on SegE,or just turn it into a line
+    let cmp = Eucl::new(Point::new(0.05, 0.1));
     assert_eq!(qt.find(&cmp).unwrap(), (&d2, 0.05));
 
     // Closer to the diagonal
-    let cmp = point!(0.1, 0.2);
+    let cmp = Eucl::new(Point::new(0.1, 0.2));
     let cmp_dist = euclidean::math::dist_pt_line((0.1, 0.2), (0.3, 0.0), (0.0, 0.4));
     let (datum, dist) = qt.find(&cmp).unwrap();
     assert!((dist - cmp_dist).abs() < EPSILON);
@@ -191,7 +167,7 @@ fn find_returns_closest_in_euclidean_for_segments_in_bounds_qt() {
 
     
     // Closer to the random line
-    let cmp = point!(0.8, 0.8);
+    let cmp = Eucl::new(Point::new(0.8, 0.8));
     let (datum, dist) = qt.find(&cmp).unwrap();
     assert!((dist - 0.1).abs() < EPSILON);
     assert_eq!(datum, &d5);
@@ -200,19 +176,19 @@ fn find_returns_closest_in_euclidean_for_segments_in_bounds_qt() {
 #[test]
 fn find_returns_closest_in_speherical_in_bounds_qt() {
     // Work with point cmp here which already implements the right Dist
-    let origin = point!(-1.0, -1.0, Spherical);
-    let bounds = Bounds::new(origin, 1.0, 1.0);
+    let origin = Point::new(-1.0, -1.0);
+    let bounds = Rect::new(origin.0, coord! {x: 1.0, y: 1.0});
     let mut qt = BoundsQuadTree::new(bounds, 2, 2);
 
     // Both in the TL
-    let d1 = Segment::new(point!(-0.4, 0.0, Spherical), point!(-0.4, -0.4, Spherical));
-    let d2 = Segment::new(point!(0.0, -0.4, Spherical), point!(-0.4, -0.4, Spherical));
+    let d1 = Line::new(coord!(x: -0.4, y: 0.0), coord!(x: -0.4, y: -0.4));
+    let d2 = Line::new(coord!(x: 0.0, y: -0.4), coord!(x: -0.4, y: -0.4));
 
     qt.insert(d1.clone());
     qt.insert(d2.clone());
 
     // Should be closer to the vertical line due to curvature
-    let cmp = point!(-0.2, -0.2, Spherical);
+    let cmp = Sph::new(Point::new(-0.2, -0.2));
     let dist_cmp = spherical::math::dist_pt_pt((-0.2, -0.2), (-0.4, -0.2));
     let (datum, dist) = qt.find(&cmp).unwrap();
     assert!((dist - dist_cmp).abs() < EPSILON);
@@ -221,20 +197,20 @@ fn find_returns_closest_in_speherical_in_bounds_qt() {
 
 #[test]
 fn knn_on_point_qt_returns_k_nodes_in_dist_order() {
-    let origin = point!(0.0, 0.0);
-    let bounds = Bounds::new(origin, 8.0, 8.0);
+    let origin = Point::new(0.0, 0.0);
+    let bounds = Rect::new(origin.0, coord! {x: 8.0, y: 8.0});
     let mut qt = PointQuadTree::new(bounds, 2, 2);
 
-    let p1 = point!(2.0, 2.0);
-    let p2 = point!(3.0, 3.0);
-    let p3 = point!(6.0, 6.0);
+    let p1 = Point::new(2.0, 2.0);
+    let p2 = Point::new(3.0, 3.0);
+    let p3 = Point::new(6.0, 6.0);
 
     qt.insert(p1.clone());
     qt.insert(p1.clone());
     qt.insert(p2.clone());
     qt.insert(p3.clone());
 
-    let cmp = point!(6.0, 5.0);
+    let cmp = Eucl::new(Point::new(6.0, 5.0));
     let res = qt.knn(&cmp, 3, f64::INFINITY);
 
     assert_eq!(res.len(), 3);
@@ -248,20 +224,20 @@ fn knn_on_point_qt_returns_k_nodes_in_dist_order() {
 
 #[test]
 fn knn_on_point_qt_stops_at_r() {
-    let origin = point!(0.0, 0.0);
-    let bounds = Bounds::new(origin, 8.0, 8.0);
+    let origin = Point::new(0.0, 0.0);
+    let bounds = Rect::new(origin.0, coord! {x: 8.0, y: 8.0});
     let mut qt = PointQuadTree::new(bounds, 2, 2);
 
-    let p1 = point!(2.0, 2.0);
-    let p2 = point!(3.0, 3.0);
-    let p3 = point!(6.0, 6.0);
+    let p1 = Point::new(2.0, 2.0);
+    let p2 = Point::new(3.0, 3.0);
+    let p3 = Point::new(6.0, 6.0);
 
     qt.insert(p1.clone());
     qt.insert(p1.clone());
     qt.insert(p2.clone());
     qt.insert(p3.clone());
 
-    let cmp = point!(6.0, 5.0);
+    let cmp = Eucl::new(Point::new(6.0, 5.0));
     let res = qt.knn(&cmp, 3, 4.0);
     
     assert_eq!(res.len(), 2);
@@ -270,4 +246,3 @@ fn knn_on_point_qt_stops_at_r() {
     assert_eq!(res[1].0.x_y(), p2.x_y());
     assert!((res[1].1 - 13.0f64.sqrt()).abs() < EPSILON);
 }
-*/

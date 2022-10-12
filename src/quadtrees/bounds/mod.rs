@@ -69,15 +69,13 @@ where
     }
 }
 
-/* TODO: Commented until dist is fixed
-impl<T, Geom> QuadTreeSearch<T, Geom> for BoundsQuadTree<T, Geom>
+impl<T> QuadTreeSearch<T> for BoundsQuadTree<T>
 where
-    T: BoundsDatum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: BoundsDatum,
 {
     fn find<X>(&self, cmp: &X) -> Option<(&T, f64)> 
     where
-        X: Distance<Bounds<Geom>> + Distance<T>
+        X: SearchDistance<T>
     {
         let mut stack = vec![&self.root];
         let mut min_dist = f64::INFINITY;
@@ -86,7 +84,7 @@ where
         while let Some(node) = stack.pop() {
             // No need to check the children if the bounds are too far,
             // checking bounds is cheaper then checking each child
-            let bounds_dist = cmp.dist(node.bounds());
+            let bounds_dist = cmp.dist_bbox(node.bounds());
             if bounds_dist >= min_dist { continue; }
 
             // Loop through all the children of the current node, retaining
@@ -94,9 +92,9 @@ where
             // Children will iterate through all children, stuck or otherwise
             for child in node.children() {
                 // Shortcut the potentially complex distance calc by using the bounds
-                if cmp.dist(&child.bounds()) > min_dist { continue; }
+                if cmp.dist_bbox(&child.bounds()) > min_dist { continue; }
 
-                let child_dist = cmp.dist(child);
+                let child_dist = cmp.dist_datum(child);
                 if child_dist < min_dist {
                     min_dist = child_dist;
                     min_item = Some(child);
@@ -116,12 +114,11 @@ where
 
     fn knn<X>(&self, cmp: &X, k: usize, r: f64) -> Vec<(&T, f64)>
     where
-        X: Distance<Bounds<Geom>> + Distance<T>
+        X: SearchDistance<T>
     {
         knn(&self.root, cmp, k, r)
     }
 }
-*/
 
 impl<'a, T> IntoIterator for &'a BoundsQuadTree<T>
 where

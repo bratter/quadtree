@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 geo = "0.23.0"
+num-traits = "0.2"
+rstar = "0.9.3"

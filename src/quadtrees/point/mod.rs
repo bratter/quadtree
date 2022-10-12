@@ -72,15 +72,13 @@ where
     }
 }
 
-/* TODO: Commented until dist is fixed
-impl<T, Geom> QuadTreeSearch<T, Geom> for PointQuadTree<T, Geom>
+impl<T> QuadTreeSearch<T> for PointQuadTree<T>
 where
-    T: Datum<Geom>,
-    Geom: System<Geometry = Geom>,
+    T: Datum,
 {
     fn find<X>(&self, cmp: &X) -> Option<(&T, f64)> 
     where
-        X: Distance<Bounds<Geom>> + Distance<T>
+        X: SearchDistance<T>
     {
         let mut stack = vec![&self.root];
         let mut min_dist = f64::INFINITY;
@@ -90,13 +88,13 @@ where
             // First look at the current node and check if it should be
             // processed - skip processing if the edge of the node is further
             // than the current 
-            let bounds_dist = cmp.dist(node.bounds());
+            let bounds_dist = cmp.dist_bbox(node.bounds());
             if bounds_dist >= min_dist { continue; }
 
             // Loop through all the children of the current node, retaining
             // only the currently closest child
             for child in node.children() {
-                let child_dist = cmp.dist(child);
+                let child_dist = cmp.dist_datum(child);
                 if child_dist < min_dist {
                     min_dist = child_dist;
                     min_item = Some(child);
@@ -116,12 +114,11 @@ where
 
     fn knn<X>(&self, cmp: &X, k: usize, r: f64) -> Vec<(&T, f64)>
     where
-        X: Distance<Bounds<Geom>> + Distance<T>
+        X: SearchDistance<T>
     {
         knn(&self.root, cmp, k, r)
     }
 }
-*/
 
 impl<'a, T> IntoIterator for &'a PointQuadTree<T>
 where

@@ -1,32 +1,27 @@
 use crate::*;
-use std::marker::PhantomData;
 
-enum KnnType<'a, NodeType, T, Geom>
+enum KnnType<'a, NodeType, T>
 where
     NodeType: Node<T>,
     T: Datum,
-    Geom: System<Geometry = Geom>,
 {
     Node(&'a NodeType),
     Child(&'a T),
-    _Geom(PhantomData<Geom>),
 }
 
-/* TODO: Remove knn implementation until dist is sorted
 // Private, general, knn function implementation that takes an explcit node
 // This gets around forcing Node to be object safe and doing priv-in-pub to
 // get access to the root node, as root is just passed here.
 // QT implementations can simply delegate to this function.
-pub fn knn<'a, T, N, X, Geom>(root: &'a N, cmp: &X, k: usize, r: f64) -> Vec<(&'a T, f64)>
+pub fn knn<'a, T, N, X>(root: &'a N, cmp: &X, k: usize, r: f64) -> Vec<(&'a T, f64)>
 where
-    T: Datum<Geom>,
-    N: Node<T, Geom>,
-    X: Distance<Bounds<Geom>> + Distance<T>,
-    Geom: System<Geometry = Geom>,
+    T: Datum,
+    N: Node<T>,
+    X: SearchDistance<T>,
 {
     // We work on a tuple that contains the distance plus an enum
     // containing either a child or a node, and start by seeding the root
-    let root_d = cmp.dist(root.bounds());
+    let root_d = cmp.dist_bbox(root.bounds());
     let mut work_stack = vec![(KnnType::Node(root), root_d)];
     let mut results = vec![];
 
@@ -60,13 +55,13 @@ where
 
             let children = node.children()
                 .into_iter()
-                .map(|child| (KnnType::Child(child), cmp.dist(child)));
+                .map(|child| (KnnType::Child(child), cmp.dist_datum(child)));
             work_stack.extend(children);
 
             if let Some(nodes) = node.nodes() {
                 work_stack.extend(
                     nodes.iter().map(
-                        |node| (KnnType::Node(node), cmp.dist(node.bounds()))
+                        |node| (KnnType::Node(node), cmp.dist_bbox(node.bounds()))
                     )
                 );
             }
@@ -76,4 +71,3 @@ where
         }
     }
 }
-*/
