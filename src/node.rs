@@ -1,4 +1,4 @@
-use geo::Rect;
+use geo::{Rect, coord};
 use super::*;
 
 pub enum SubNode {

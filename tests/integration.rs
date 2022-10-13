@@ -1,4 +1,4 @@
-use geo::{Point, Rect, Line, HaversineDistance};
+use geo::{Point, Rect, Line, HaversineDistance, coord};
 use quadtree::*;
 use quadtree::geom::*;
 

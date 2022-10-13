@@ -144,8 +144,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
-    use geo::{Point, Rect};
+    use geo::{Point, Rect, coord};
 
     use super::*;
 

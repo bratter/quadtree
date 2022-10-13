@@ -23,10 +23,10 @@ mod node;
 mod iter;
 mod knn;
 
-use geo::{Rect, BoundingRect, EuclideanDistance, HaversineDistance, InteriorPoint};
+use geo::{Rect, BoundingRect, InteriorPoint};
 
+// TODO: Fix these imports
 use geom::*;
-// TODO: Fix this import
 use geom::rect::{DistEuclidean, DistHaversine};
 use node::*;
 use iter::*;

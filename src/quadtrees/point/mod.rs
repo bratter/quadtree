@@ -144,7 +144,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use geo::Point;
+    use geo::{Point, coord};
 
     use super::*;
 

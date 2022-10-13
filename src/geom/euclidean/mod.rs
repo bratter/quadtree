@@ -1,61 +1,47 @@
-use geo::Line;
-
-use super::*;
+use geo::{Rect, coord, EuclideanDistance};
 
 /// Module containing Euclidean coordinate math
 pub mod math;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Euclidean;
-impl System for Euclidean {
-    type Geometry = Euclidean;
+pub fn dist_rect_rect(r1: &Rect, r2: &Rect) -> f64 {
+    let overlap_x = r1.max().x >= r2.min().x && r2.max().x >= r1.min().x;
+    let overlap_y = r1.max().y >= r2.min().y && r2.max().y >= r1.min().y;
 
-    fn dist_pt_pt(p1: &Point<Self::Geometry>, p2: &Point<Self::Geometry>) -> f64 {
-        math::dist_pt_pt(p1.x_y(), p2.x_y())
-    }
+    match (overlap_x, overlap_y) {
+        // If there is any overlap, then the distance is zero
+        (true, true) => 0.0,
+        // When x overlaps, distance is the smallest y-difference,
+        // and similarly for y-overlaps
+        (true, false) => (r1.min().y - r2.max().y).min(r2.min().y - r1.max().y),
+        (false, true) => (r1.min().x - r2.max().x).min(r2.min().x - r1.max().x),
+        // When neither overlaps, take the distance from closest corners
+        (false, false) => {
+            let (x1, x2) = if r1.max().x < r2.min().x {
+                (r1.max().x, r2.min().x)
+            } else {
+                (r1.min().x, r2.max().x)
+            };
+            let (y1, y2) = if r1.max().y < r2.min().y {
+                (r1.max().y, r2.min().y)
+            } else {
+                (r1.min().y, r2.max().y)
+            };
 
-    fn dist_pt_line(pt: &Point<Self::Geometry>, line: &Line) -> f64 {
-        math::dist_pt_line(pt.x_y(), line.start_point().x_y(), line.end_point().x_y())
-    }
-
-    fn dist_bounds_bounds(b1: &Bounds<Self::Geometry>, b2: &Bounds<Self::Geometry>) -> f64 {
-        let overlap_x = b1.x_max() >= b2.x_min() && b2.x_max() >= b1.x_min();
-        let overlap_y = b1.y_max() >= b2.y_min() && b2.y_max() >= b1.y_min();
-
-        match (overlap_x, overlap_y) {
-            // If there is any overlap, then the distance is zero
-            (true, true) => 0.0,
-            // When x overlaps, distance is the smallest y-difference,
-            // and similarly for y-overlaps
-            (true, false) => (b1.y_min() - b2.y_max()).min(b2.y_min() - b1.y_max()),
-            (false, true) => (b1.x_min() - b2.x_max()).min(b2.x_min() - b1.x_max()),
-            // When neither overlaps, take the distance from closest corners
-            (false, false) => {
-                let (x1, x2) = if b1.x_max() < b2.x_min() {
-                    (b1.x_max(), b2.x_min())
-                } else {
-                    (b1.x_min(), b2.x_max())
-                };
-                let (y1, y2) = if b1.y_max() < b2.y_min() {
-                    (b1.y_max(), b2.y_min())
-                } else {
-                    (b1.y_min(), b2.y_max())
-                };
-
-                math::dist_pt_pt((x1, y1), (x2, y2))
-            }
+            coord!(x: x1, y: y1).euclidean_distance(&coord!(x: x2, y: y2))
         }
     }
 }
 
+// TODO: Add dist rect rect tests, potentially remove ones not needed because of geo
+//       The current tests are basically useless as they only test geo functionality
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use geo::{Point, Line, EuclideanDistance};
 
     #[test]
     fn can_construct_points_and_line_segments() {
-        let p1 = point!(0.0, 0.0, Euclidean);
-        let p2 = point!(3.0, 4.0);
+        let p1 = Point::new(0.0, 0.0);
+        let p2 = Point::new(3.0, 4.0);
 
         let seg = Line::new(p1.0, p2.0);
 
@@ -68,16 +54,16 @@ mod tests {
 
     #[test]
     fn calculate_pt_pt_and_pt_segment_distance() {
-        let p1 = point!(0.0, 0.0);
-        let p2 = point!(3.0, 4.0);
-        let p3 = point!(3.0, 0.0);
+        let p1 = Point::new(0.0, 0.0);
+        let p2 = Point::new(3.0, 4.0);
+        let p3 = Point::new(3.0, 0.0);
 
         let seg = Line::new(p1.0, p2.0);
 
-        assert_eq!(p1.dist(&p2), 5.0);
+        assert_eq!(p1.euclidean_distance(&p2), 5.0);
 
         // TODO: Clean up tests
-        // assert_eq!(p1.dist(&seg), 0.0);
-        // assert_eq!(seg.dist(&p2), 4.0);
+        assert_eq!(p1.euclidean_distance(&seg), 0.0);
+        assert_eq!(seg.euclidean_distance(&p2), 4.0);
     }
 }

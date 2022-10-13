@@ -1,3 +1,5 @@
+// TODO: A;; Euclidean math should be deleted
+
 type Pt = (f64, f64);
 
 /// Calculate the square of the distance between a point `p` and reference
