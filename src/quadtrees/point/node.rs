@@ -1,8 +1,8 @@
-use geo::Rect;
+use geo::{Rect, Coordinate};
 use crate::*;
 
 #[derive(Debug)]
-pub struct PointNode<T: Datum> {
+pub struct PointNode<T: PointDatum> {
     bounds: Rect,
     depth: u8,
     max_depth: u8,
@@ -11,7 +11,7 @@ pub struct PointNode<T: Datum> {
     pub nodes: Option<Box<[PointNode<T>; 4]>>,
 }
 
-impl<T: Datum> Node<T> for PointNode<T> {
+impl<D: PointDatum> Node<D> for PointNode<D> {
     fn new(bounds: Rect, depth: u8, max_depth: u8, max_children: usize) -> Self {
         Self {
             bounds,
@@ -23,18 +23,22 @@ impl<T: Datum> Node<T> for PointNode<T> {
         }
     }
 
+    fn datum_position(datum: &D) -> Coordinate {
+        datum.point().0
+    }
+
     // Getters
     fn bounds(&self) -> &Rect { &self.bounds }
     fn depth(&self) -> u8 { self.depth }
     fn max_depth(&self) -> u8 { self.max_depth }
     fn max_children(&self) -> usize { self.max_children }
-    fn children(&self) -> Vec<&T> { self.children.iter().collect() }
-    fn nodes(&self) -> &Option<Box<[PointNode<T>; 4]>> { &self.nodes }
+    fn children(&self) -> Vec<&D> { self.children.iter().collect() }
+    fn nodes(&self) -> &Option<Box<[PointNode<D>; 4]>> { &self.nodes }
 
     // Setters
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
 
-    fn insert(&mut self, datum: T) {
+    fn insert(&mut self, datum: D) {
         // Take ownership of the sub-nodes before matching to enable the insertion
         // This, apparently, is a very common pattern
         // Works here because we replace the nodes at the end, and the None branch
@@ -71,7 +75,7 @@ impl<T: Datum> Node<T> for PointNode<T> {
     }
 
     // Pulls all children within the node that would contain the passed point
-    fn retrieve(&self, datum: &T) -> Vec<&T> {
+    fn retrieve(&self, datum: &D) -> Vec<&D> {
         match &self.nodes {
             Some(nodes) => {
                 nodes[self.find_sub_node(datum) as usize].retrieve(datum)
@@ -84,7 +88,7 @@ impl<T: Datum> Node<T> for PointNode<T> {
     }
 }
 
-impl<T: Datum> std::fmt::Display for PointNode<T> {
+impl<D: PointDatum> std::fmt::Display for PointNode<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display(f)
     }

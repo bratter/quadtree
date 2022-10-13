@@ -1,18 +1,18 @@
-use geo::{Rect, Contains, Intersects};
+use geo::{Rect, Coordinate, Contains, Intersects};
 use crate::*;
 
 #[derive(Debug)]
-pub struct BoundsNode<T: BoundsDatum> {
+pub struct BoundsNode<D: BoundsDatum> {
     bounds: Rect,
     depth: u8,
     max_depth: u8,
     max_children: usize,
-    pub children: Vec<T>,
-    pub stuck_children: Vec<T>,
-    pub nodes: Option<Box<[BoundsNode<T>; 4]>>,
+    pub children: Vec<D>,
+    pub stuck_children: Vec<D>,
+    pub nodes: Option<Box<[BoundsNode<D>; 4]>>,
 }
 
-impl<T: BoundsDatum> Node<T> for BoundsNode<T> {
+impl<D: BoundsDatum> Node<D> for BoundsNode<D> {
     fn new(bounds: Rect, depth: u8, max_depth: u8, max_children: usize) -> Self {
         Self {
             bounds,
@@ -25,12 +25,16 @@ impl<T: BoundsDatum> Node<T> for BoundsNode<T> {
         }
     }
 
+    fn datum_position(datum: &D) -> Coordinate {
+        datum.bounds().center()
+    }
+
     // Getters
     fn bounds(&self) -> &Rect { &self.bounds }
     fn depth(&self) -> u8 { self.depth }
     fn max_depth(&self) -> u8 { self.max_depth }
     fn max_children(&self) -> usize { self.max_children }
-    fn children(&self) -> Vec<&T> {
+    fn children(&self) -> Vec<&D> {
         self.children.iter().chain(&self.stuck_children).collect()
     }
     fn nodes(&self) -> &Option<Box<[Self; 4]>> { &self.nodes }
@@ -38,7 +42,7 @@ impl<T: BoundsDatum> Node<T> for BoundsNode<T> {
     // Setters
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
 
-    fn insert(&mut self, datum: T) {
+    fn insert(&mut self, datum: D) {
         // See notes in the PointQuadTree implementation on take
         match self.nodes.take() {
             // If we have sub-nodes already, pass down the tree
@@ -76,7 +80,7 @@ impl<T: BoundsDatum> Node<T> for BoundsNode<T> {
         }
     }
 
-    fn retrieve(&self, datum: &T) -> Vec<&T> {
+    fn retrieve(&self, datum: &D) -> Vec<&D> {
         let mut children = match &self.nodes {
             // Where there are nodes, processes them
             Some(nodes) => {
@@ -107,7 +111,7 @@ impl<T: BoundsDatum> Node<T> for BoundsNode<T> {
     }
 }
 
-impl<T: BoundsDatum> std::fmt::Display for BoundsNode<T> {
+impl<D: BoundsDatum> std::fmt::Display for BoundsNode<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display(f)
     }

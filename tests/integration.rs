@@ -1,6 +1,5 @@
-use geo::{Point, Rect, Line, HaversineDistance, coord};
+use geo::{Point, Rect, Line, HaversineDistance, coord, EuclideanDistance};
 use quadtree::*;
-use quadtree::geom::*;
 
 const EPSILON: f64 = 1e-6;
 
@@ -97,7 +96,7 @@ fn find_returns_closest_in_eucildean_for_point_qt() {
     qt.insert(p4.clone());
     qt.insert(p4.clone());
 
-    let cmp = Eucl::new(Point::new(0.4, 0.39));
+    let cmp = eucl(Point::new(0.4, 0.39));
     assert_eq!(qt.find(&cmp).unwrap(), (&p1, 0.19));
 }
 
@@ -121,7 +120,7 @@ fn find_returns_closest_in_spherical_for_point_qt() {
     // Make this slightly closer to the x axis
     // Then in spherical the distance is closer to the other point
     // TODO: Sph needs new method and haversine dist needs to be implemented
-    let cmp = Sph::new(Point::new(0.4, 0.39));
+    let cmp = sphere(Point::new(0.4, 0.39));
     let (p, d) = qt.find(&cmp).unwrap();
     assert_eq!(p, &p2);
     assert!((d - cmp.haversine_distance(&p2)).abs() < EPSILON);
@@ -155,19 +154,19 @@ fn find_returns_closest_in_euclidean_for_segments_in_bounds_qt() {
 
     // Closer to the y-axis
     // TODO: Need to implement the right distances on SegE,or just turn it into a line
-    let cmp = Eucl::new(Point::new(0.05, 0.1));
+    let cmp = Euclidean::new(Point::new(0.05, 0.1));
     assert_eq!(qt.find(&cmp).unwrap(), (&d2, 0.05));
 
     // Closer to the diagonal
-    let cmp = Eucl::new(Point::new(0.1, 0.2));
-    let cmp_dist = euclidean::math::dist_pt_line((0.1, 0.2), (0.3, 0.0), (0.0, 0.4));
+    let cmp = Euclidean::new(Point::new(0.1, 0.2));
+    let cmp_dist = Point::new(0.1, 0.2).euclidean_distance(&line(0.3, 0.0, 0.0, 0.4));
     let (datum, dist) = qt.find(&cmp).unwrap();
     assert!((dist - cmp_dist).abs() < EPSILON);
     assert_eq!(datum, &d1);
 
     
     // Closer to the random line
-    let cmp = Eucl::new(Point::new(0.8, 0.8));
+    let cmp = Euclidean::new(Point::new(0.8, 0.8));
     let (datum, dist) = qt.find(&cmp).unwrap();
     assert!((dist - 0.1).abs() < EPSILON);
     assert_eq!(datum, &d5);
@@ -188,8 +187,8 @@ fn find_returns_closest_in_speherical_in_bounds_qt() {
     qt.insert(d2.clone());
 
     // Should be closer to the vertical line due to curvature
-    let cmp = Sph::new(Point::new(-0.2, -0.2));
-    let dist_cmp = spherical::math::dist_pt_pt((-0.2, -0.2), (-0.4, -0.2));
+    let cmp = Spherical::new(Point::new(-0.2, -0.2));
+    let dist_cmp = Point::new(-0.2, -0.2).haversine_distance(&Point::new(-0.4, -0.2));
     let (datum, dist) = qt.find(&cmp).unwrap();
     assert!((dist - dist_cmp).abs() < EPSILON);
     assert_eq!(datum, &d1);
@@ -210,7 +209,7 @@ fn knn_on_point_qt_returns_k_nodes_in_dist_order() {
     qt.insert(p2.clone());
     qt.insert(p3.clone());
 
-    let cmp = Eucl::new(Point::new(6.0, 5.0));
+    let cmp = Euclidean::new(Point::new(6.0, 5.0));
     let res = qt.knn(&cmp, 3, f64::INFINITY);
 
     assert_eq!(res.len(), 3);
@@ -237,7 +236,7 @@ fn knn_on_point_qt_stops_at_r() {
     qt.insert(p2.clone());
     qt.insert(p3.clone());
 
-    let cmp = Eucl::new(Point::new(6.0, 5.0));
+    let cmp = Euclidean::new(Point::new(6.0, 5.0));
     let res = qt.knn(&cmp, 3, 4.0);
     
     assert_eq!(res.len(), 2);

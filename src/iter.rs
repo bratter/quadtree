@@ -3,7 +3,6 @@ use super::*;
 // Iterator implementation for a quadtree
 pub struct QuadTreeIter<'a, D, N>
 where
-    D: Datum,
     N: Node<D>,
 {
     stack: Vec<&'a N>,
@@ -12,7 +11,6 @@ where
 
 impl<'a, D, N> QuadTreeIter<'a, D, N>
 where
-    D: Datum,
     N: Node<D>,
 {
     pub fn new(root: &'a N) -> Self {
@@ -22,7 +20,6 @@ where
 
 impl<'a, D, N> Iterator for QuadTreeIter<'a, D, N>
 where
-    D: Datum,
     N: Node<D>,
 {
     type Item = &'a D;

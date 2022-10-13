@@ -1,25 +1,28 @@
+mod datum;
 mod node;
 
+// TODO: Clean up imports/exports everywhere
 use std::vec;
 use geo::{Rect, Contains};
 
 use crate::*;
+pub use datum::*;
 use node::*;
 
 /// A quadtree implementation for bounded items (i.e. those with a finite width
 /// and/or height).
 #[derive(Debug)]
-pub struct BoundsQuadTree<T>
+pub struct BoundsQuadTree<D>
 where
-    T: BoundsDatum,
+    D: BoundsDatum,
 {
-    root: BoundsNode<T>,
+    root: BoundsNode<D>,
     size: usize,
 }
 
-impl<T> BoundsQuadTree<T>
+impl<D> BoundsQuadTree<D>
 where
-    T: BoundsDatum,
+    D: BoundsDatum,
 {
     // Private constructor
     fn private_new(bounds: Rect, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
@@ -33,9 +36,9 @@ where
     }
 }
 
-impl<T> QuadTree<T> for BoundsQuadTree<T>
+impl<D> QuadTree<D> for BoundsQuadTree<D>
 where
-    T: BoundsDatum,
+    D: BoundsDatum,
 {
     fn new(bounds: Rect, max_depth: u8, max_children: usize) -> Self {
         BoundsQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
@@ -49,7 +52,7 @@ where
         self.size
     }
 
-    fn insert(&mut self, datum: T) {
+    fn insert(&mut self, datum: D) {
         // Bounds check - discard nodes that are not completely contained
         let qb = self.root.bounds();
         let db = &datum.bounds();
@@ -60,7 +63,7 @@ where
         }
     }
 
-    fn retrieve(&self, datum: &T) -> Vec<&T> {
+    fn retrieve(&self, datum: &D) -> Vec<&D> {
         if self.root.bounds().contains(&datum.bounds()) {
             self.root.retrieve(datum)
         } else {
@@ -69,17 +72,17 @@ where
     }
 }
 
-impl<T> QuadTreeSearch<T> for BoundsQuadTree<T>
+impl<D> QuadTreeSearch<D> for BoundsQuadTree<D>
 where
-    T: BoundsDatum,
+    D: BoundsDatum,
 {
-    fn find<X>(&self, cmp: &X) -> Option<(&T, f64)> 
+    fn find<T>(&self, cmp: &T) -> Option<(&D, f64)> 
     where
-        X: SearchDistance<T>
+        T: Distance<D>
     {
         let mut stack = vec![&self.root];
         let mut min_dist = f64::INFINITY;
-        let mut min_item: Option<&T> = None;
+        let mut min_item: Option<&D> = None;
 
         while let Some(node) = stack.pop() {
             // No need to check the children if the bounds are too far,
@@ -112,29 +115,29 @@ where
         min_item.map(|item| (item, min_dist))
     }
 
-    fn knn<X>(&self, cmp: &X, k: usize, r: f64) -> Vec<(&T, f64)>
+    fn knn<T>(&self, cmp: &T, k: usize, r: f64) -> Vec<(&D, f64)>
     where
-        X: SearchDistance<T>
+        T: Distance<D>
     {
         knn(&self.root, cmp, k, r)
     }
 }
 
-impl<'a, T> IntoIterator for &'a BoundsQuadTree<T>
+impl<'a, D> IntoIterator for &'a BoundsQuadTree<D>
 where
-    T: BoundsDatum,
+    D: BoundsDatum,
 {
-    type Item = &'a T;
-    type IntoIter = QuadTreeIter<'a, T, BoundsNode<T>>;
+    type Item = &'a D;
+    type IntoIter = QuadTreeIter<'a, D, BoundsNode<D>>;
 
     fn into_iter(self) -> Self::IntoIter {
         QuadTreeIter::new(&self.root)
     }
 }
 
-impl<T> std::fmt::Display for BoundsQuadTree<T>
+impl<D> std::fmt::Display for BoundsQuadTree<D>
 where
-    T: BoundsDatum,
+    D: BoundsDatum,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Bounds Quadtree Root:")?;
@@ -145,21 +148,7 @@ where
 #[cfg(test)]
 mod tests {
     use geo::{Point, Rect, coord};
-
     use super::*;
-
-    // Set up Rect to act as a BoundsDatum
-    impl Datum for Rect {
-        fn point(&self) -> Point {
-            Point::from(self.min())
-        }
-    }
-
-    impl BoundsDatum for Rect {
-        fn bounds(&self) -> Rect {
-            *self
-        }
-    }
 
     // helper function for bounds datum creation
     fn b(x: f64, y: f64, w: f64, h: f64) -> Rect {

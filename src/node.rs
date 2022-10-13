@@ -1,5 +1,4 @@
-use geo::{Rect, coord};
-use super::*;
+use geo::{Rect, Coordinate, coord};
 
 pub enum SubNode {
     TopLeft = 0,
@@ -8,12 +7,15 @@ pub enum SubNode {
     BottomLeft = 3,
 }
 
-pub trait Node <T>
+pub trait Node<D>
 where
-    T: Datum,
     Self: Sized
 {
     fn new(bounds: Rect, depth: u8, max_depth: u8, max_children: usize) -> Self;
+
+    /// Get a single Coordinate position of the datum in a manner suitable for
+    /// the constraints of the implementation.
+    fn datum_position(datum: &D) -> Coordinate;
 
     fn bounds(&self) -> &Rect;
 
@@ -27,18 +29,18 @@ where
     /// This includes direct children and any stuck children if that concept
     /// exists for this QuadTree type. This means that any node, not just leaf
     /// nodes, may have children.
-    fn children(&self) -> Vec<&T>;
+    fn children(&self) -> Vec<&D>;
 
     fn nodes(&self) -> &Option<Box<[Self; 4]>>;
 
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>);
 
-    fn insert(&mut self, datum: T);
+    fn insert(&mut self, datum: D);
 
-    fn retrieve(&self, datum: &T) -> Vec<&T>;
+    fn retrieve(&self, datum: &D) -> Vec<&D>;
 
-    fn find_sub_node(&self, datum: &T) -> SubNode {
-        let (x, y) = datum.point().x_y();
+    fn find_sub_node(&self, datum: &D) -> SubNode {
+        let (x, y) = Self::datum_position(datum).x_y();
         let center = self.bounds().center();
         let left = x <= center.x;
         let top = y <= center.y;
@@ -49,7 +51,7 @@ where
         else { SubNode::BottomRight }
     }
 
-    fn subdivide(&mut self) where Self: Sized {
+    fn subdivide(&mut self) {
         let bounds = self.bounds();
         let depth = self.depth() + 1;
         let md = self.max_depth();
@@ -95,10 +97,9 @@ where
 }
 
 // TODO: Better to implement as iter on Node?
-pub fn get_all_children<N, T>(node: &N) -> Vec<&T>
+pub(crate) fn get_all_children<N, D>(node: &N) -> Vec<&D>
 where
-    N: Node<T>,
-    T: Datum,
+    N: Node<D>,
 {
     let mut children = node.children();
 

@@ -1,24 +1,28 @@
+mod datum;
 mod node;
 
+// TODO: Clean up imports/exports everywhere
 use geo::{Rect, Contains};
 use crate::*;
-use node::*;
+pub use datum::*;
+use node::PointNode;
+use geom::Distance;
 
 /// A quadtree implementation for points.
 #[derive(Debug)]
-pub struct PointQuadTree<T>
+pub struct PointQuadTree<D>
 where
-    T: Datum,
+    D: PointDatum,
 {
-    root: PointNode<T>,
+    root: PointNode<D>,
     // Maintain a count for size
     // Could calculate this each time, but it only saves usize memory
     size: usize,
 }
 
-impl<T> PointQuadTree<T>
+impl<D> PointQuadTree<D>
 where
-    T: Datum,
+    D: PointDatum,
 {
     // Private constructor
     fn private_new(bounds: Rect, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
@@ -35,9 +39,9 @@ where
 // TODO: When generalizing behavior...
 // Out of bounds insertion and retrieval behavior is up to the specific
 // implementation, and could even panic if required
-impl<T> QuadTree<T> for PointQuadTree<T>
+impl<D> QuadTree<D> for PointQuadTree<D>
 where
-    T: Datum,
+    D: PointDatum,
 {
     fn new(bounds: Rect, max_depth: u8, max_children: usize) -> Self {
         PointQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
@@ -54,14 +58,14 @@ where
     // TODO: Should we use Error semantics on insert? Rust requires errors to be handled
     // Here we assume that `root.insert` always succeeds so we can increment
     // count. This should work if the pt is in bounds
-    fn insert(&mut self, pt: T) {
+    fn insert(&mut self, pt: D) {
         if self.root.bounds().contains(&pt.point()) {
             self.root.insert(pt);
             self.size += 1;
         }
     }
 
-    fn retrieve(&self, pt: &T) -> Vec<&T> {
+    fn retrieve(&self, pt: &D) -> Vec<&D> {
         // Bounds check first - capturing out of bounds here
         // This trusts the Node implementation to act correctly
         if self.root.bounds().contains(&pt.point()) {
@@ -72,17 +76,17 @@ where
     }
 }
 
-impl<T> QuadTreeSearch<T> for PointQuadTree<T>
+impl<D> QuadTreeSearch<D> for PointQuadTree<D>
 where
-    T: Datum,
+    D: PointDatum,
 {
-    fn find<X>(&self, cmp: &X) -> Option<(&T, f64)> 
+    fn find<T>(&self, cmp: &T) -> Option<(&D, f64)> 
     where
-        X: SearchDistance<T>
+        T: Distance<D>
     {
         let mut stack = vec![&self.root];
         let mut min_dist = f64::INFINITY;
-        let mut min_item: Option<&T> = None;
+        let mut min_item: Option<&D> = None;
 
         while let Some(node) = stack.pop() {
             // First look at the current node and check if it should be
@@ -112,29 +116,29 @@ where
         min_item.map(|item| (item, min_dist))
     }
 
-    fn knn<X>(&self, cmp: &X, k: usize, r: f64) -> Vec<(&T, f64)>
+    fn knn<T>(&self, cmp: &T, k: usize, r: f64) -> Vec<(&D, f64)>
     where
-        X: SearchDistance<T>
+        T: Distance<D>
     {
         knn(&self.root, cmp, k, r)
     }
 }
 
-impl<'a, T> IntoIterator for &'a PointQuadTree<T>
+impl<'a, D> IntoIterator for &'a PointQuadTree<D>
 where
-    T: Datum,
+    D: PointDatum,
 {
-    type Item = &'a T;
-    type IntoIter = QuadTreeIter<'a, T, PointNode<T>>;
+    type Item = &'a D;
+    type IntoIter = QuadTreeIter<'a, D, PointNode<D>>;
 
     fn into_iter(self) -> Self::IntoIter {
         QuadTreeIter::new(&self.root)
     }
 }
 
-impl<T> std::fmt::Display for PointQuadTree<T>
+impl<D> std::fmt::Display for PointQuadTree<D>
 where
-    T: Datum,
+    D: PointDatum,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Point Quadtree Root:")?;
@@ -152,7 +156,7 @@ mod tests {
     #[derive(Debug, Clone, Copy, PartialEq)]
     struct MyData(f64, f64);
 
-    impl Datum for MyData {
+    impl PointDatum for MyData {
         fn point(&self) -> Point {
             Point::new(self.0, self.1)
         }

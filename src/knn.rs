@@ -1,23 +1,21 @@
 use crate::*;
 
-enum KnnType<'a, NodeType, T>
+enum KnnType<'a, NodeType, D>
 where
-    NodeType: Node<T>,
-    T: Datum,
+    NodeType: Node<D>,
 {
     Node(&'a NodeType),
-    Child(&'a T),
+    Child(&'a D),
 }
 
 // Private, general, knn function implementation that takes an explcit node
 // This gets around forcing Node to be object safe and doing priv-in-pub to
 // get access to the root node, as root is just passed here.
 // QT implementations can simply delegate to this function.
-pub fn knn<'a, T, N, X>(root: &'a N, cmp: &X, k: usize, r: f64) -> Vec<(&'a T, f64)>
+pub(crate) fn knn<'a, D, N, X>(root: &'a N, cmp: &X, k: usize, r: f64) -> Vec<(&'a D, f64)>
 where
-    T: Datum,
-    N: Node<T>,
-    X: SearchDistance<T>,
+    N: Node<D>,
+    X: Distance<D>,
 {
     // We work on a tuple that contains the distance plus an enum
     // containing either a child or a node, and start by seeding the root
