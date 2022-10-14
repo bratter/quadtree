@@ -1,5 +1,5 @@
-use geo::{Point, Rect, Line, HaversineDistance, coord, EuclideanDistance};
-use quadtree::*;
+use geo::{Point, Rect, Line, EuclideanDistance, coord};
+use quadtree::{*, geom::spherical::math::dist_pt_pt};
 
 const EPSILON: f64 = 1e-6;
 
@@ -119,11 +119,10 @@ fn find_returns_closest_in_spherical_for_point_qt() {
 
     // Make this slightly closer to the x axis
     // Then in spherical the distance is closer to the other point
-    // TODO: Sph needs new method and haversine dist needs to be implemented
     let cmp = sphere(Point::new(0.4, 0.39));
     let (p, d) = qt.find(&cmp).unwrap();
     assert_eq!(p, &p2);
-    assert!((d - cmp.haversine_distance(&p2)).abs() < EPSILON);
+    assert!((d - dist_pt_pt(&cmp, &p2)).abs() < EPSILON);
 }
 
 /// Helper function to construct a line segment.
@@ -153,7 +152,6 @@ fn find_returns_closest_in_euclidean_for_segments_in_bounds_qt() {
     qt.insert(d5.clone());
 
     // Closer to the y-axis
-    // TODO: Need to implement the right distances on SegE,or just turn it into a line
     let cmp = Euclidean::new(Point::new(0.05, 0.1));
     assert_eq!(qt.find(&cmp).unwrap(), (&d2, 0.05));
 
@@ -187,8 +185,8 @@ fn find_returns_closest_in_speherical_in_bounds_qt() {
     qt.insert(d2.clone());
 
     // Should be closer to the vertical line due to curvature
-    let cmp = Spherical::new(Point::new(-0.2, -0.2));
-    let dist_cmp = Point::new(-0.2, -0.2).haversine_distance(&Point::new(-0.4, -0.2));
+    let cmp = sphere(Point::new(-0.2, -0.2));
+    let dist_cmp = dist_pt_pt(&Point::new(-0.2, -0.2), &Point::new(-0.4, -0.2));
     let (datum, dist) = qt.find(&cmp).unwrap();
     assert!((dist - dist_cmp).abs() < EPSILON);
     assert_eq!(datum, &d1);

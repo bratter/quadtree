@@ -2,6 +2,7 @@ use core::ops::Deref;
 use geo::{GeoFloat, Point, Rect, Line, EuclideanDistance};
 use num_traits::{FloatConst, Signed};
 use rstar::RTreeNum;
+use super::math::dist_rect_rect;
 
 pub trait DistEuclidean<T, Rhs = Self> where Rhs: ?Sized {
     fn dist_euclidean(&self, rhs: &Rhs) -> T;
@@ -36,7 +37,6 @@ impl<T> DistEuclidean<T, Rect<T>> for Point<T>
 where
     T: GeoFloat,
 {
-    // TODO: Use math from bounds
     fn dist_euclidean(&self, rhs: &Rect<T>) -> T {
         self.euclidean_distance(&rhs.to_polygon())
     }
@@ -65,18 +65,16 @@ where
     T: GeoFloat,
 {
     fn dist_euclidean(&self, rhs: &Rect<T>) -> T {
-        // TODO: Use math from bounds
-        todo!()
+        dist_rect_rect(self, rhs)
     }
 }
 
 impl<T> DistEuclidean<T, Line<T>> for Rect<T>
 where
-    T: GeoFloat,
+    T: GeoFloat + FloatConst + Signed + RTreeNum,
 {
     fn dist_euclidean(&self, rhs: &Line<T>) -> T {
-        // TODO: Use math from bounds
-        todo!()
+        self.to_polygon().euclidean_distance(rhs)
     }
 }
 

@@ -1,6 +1,10 @@
-use geo::{CoordFloat, Point, Rect, Line, HaversineDistance};
+use geo::{CoordFloat, Point, Rect, Line};
 use num_traits::FromPrimitive;
+use super::math::{dist_pt_pt, dist_pt_line, dist_rect_rect, dist_pt_rect};
 
+// TODO: Document this, note that we require all inputs in radians and produce all outputs in radians
+//       Mention this is different from the geo crate
+//       Provide examples and convenience methods for conversion
 pub trait DistHaversine<T, Rhs = Self> {
     fn dist_haversine(&self, rhs: &Rhs) -> T;
 }
@@ -10,66 +14,62 @@ where
     T: CoordFloat + FromPrimitive,
 {
     fn dist_haversine(&self, rhs: &Point<T>) -> T {
-        self.haversine_distance(rhs)
+        dist_pt_pt(self, rhs)
     }
 }
 
 impl<T> DistHaversine<T, Rect<T>> for Point<T>
 where
-    T: CoordFloat
+    T: CoordFloat + FromPrimitive,
 {
     fn dist_haversine(&self, rhs: &Rect<T>) -> T {
-        // TODO: Use math from spherical, but check correctness later
-        todo!()
+        dist_pt_rect(self, rhs)
     }
 }
 
 impl<T> DistHaversine<T, Line<T>> for Point<T>
 where
-    T: CoordFloat
+    T: CoordFloat + FromPrimitive,
 {
     fn dist_haversine(&self, rhs: &Line<T>) -> T {
-        // TODO: As above
-        todo!()
+        dist_pt_line(self, rhs)
     }
 }
 
 impl<T> DistHaversine<T, Point<T>> for Rect<T>
 where
-    T: CoordFloat
+    T: CoordFloat + FromPrimitive,
 {
     fn dist_haversine(&self, rhs: &Point<T>) -> T {
-        // TODO: As above
-        todo!()
+        dist_pt_rect(rhs, self)
     }
 }
 
 impl<T> DistHaversine<T, Rect<T>> for Rect<T>
 where
-    T: CoordFloat
+    T: CoordFloat + FromPrimitive,
 {
     fn dist_haversine(&self, rhs: &Rect<T>) -> T {
-        // TODO: As above
-        todo!()
+        dist_rect_rect(self, rhs)
     }
 }
 
-impl<T> DistHaversine<T, Line<T>> for Rect<T>
-where
-    T: CoordFloat
-{
-    fn dist_haversine(&self, rhs: &Line<T>) -> T {
-        // TODO: As above
-        todo!()
-    }
-}
+// TODO: Consider implementing this and the reverse
+// impl<T> DistHaversine<T, Line<T>> for Rect<T>
+// where
+//     T: CoordFloat,
+// {
+//     fn dist_haversine(&self, rhs: &Line<T>) -> T {
+//         todo!("Haversine Line Rect combos")
+//     }
+// }
 
-impl<T> DistHaversine<T, Line<T>> for Line<T>
-where
-    T: CoordFloat
-{
-    fn dist_haversine(&self, rhs: &Line<T>) -> T {
-        // TODO: As above
-        todo!()
-    }
-}
+// TODO: Consider implementing this
+// impl<T> DistHaversine<T, Line<T>> for Line<T>
+// where
+//     T: CoordFloat,
+// {
+//     fn dist_haversine(&self, rhs: &Line<T>) -> T {
+//         todo!("Haversine Line for Line")
+//     }
+// }

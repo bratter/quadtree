@@ -4,15 +4,11 @@
  * Multiple quadtree implementations for various geometries.
  * 
  * TODO: I think the way consumers can work this is have a wrapper type that is a datum that for find/knn impls DistEuclidean (should test this)
- * TODO: Document or test tht retrieve.filter can give intersections or contains; convert retrieve to an iterator?
+ * TODO: Document or test that retrieve.filter can give intersections or contains; convert retrieve to an iterator?
  * TODO: Cascade geo's numeric types into the quadtree itself
- * TODO: Maybe the best way of doing this overall is to have a trait that replaces the X in find and KNN, there is no other reason why a quadtree needs distance - not required for insert or retrieve
- *       Then datum is just a point, and bounds datum just needs to be something that can calc a bounding rectangle (the BoundingRect trait)
  * TODO: Force constraints on spherical coords?
  * TODO: Should we use Error semantics for insertion? Probably yes
  * TODO: Should this have an integer-with-power-2-bounds version?
- * TODO: Use https://georust.org/ for geographic primitives instead
- * TODO: Possible to simplify the generics? Ref https://www.youtube.com/watch?v=yozQ9C69pNs
  * TODO: Should part of node be modeled as an enum to account for children vs nodes?
  * TODO: Should spherical units deal with degrees rather than radians? Degrees are useful for readability, but radians make for easy conversions
  * TODO: Should nodes and children be private on the node structs?

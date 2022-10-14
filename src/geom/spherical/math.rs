@@ -1,14 +1,20 @@
 use std::f64::consts::PI;
 use std::ops::{Add, Sub};
-use geo::{Point, Line, Rect, HaversineDistance, CoordNum, CoordFloat};
+use geo::{Point, Line, Rect, CoordFloat, Contains, coord};
 use num_traits::FromPrimitive;
 
-/// Helper function for making points
-fn p<T>(x: T, y: T) -> Point<T>
-where
-    T: CoordNum
-{
-    Point::new(x, y)
+/// Helper macro for making points
+macro_rules! p {
+    ($x:expr, $y:expr) => {
+        Point::new($x, $y)
+    };
+}
+
+/// Helper macro to make a line
+macro_rules! l {
+    ($x1:expr, $y1:expr, $x2:expr, $y2:expr) => {
+        Line::new(coord!(x: $x1, y: $y1), coord!(x: $x2, y: $y2))
+    };
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -70,6 +76,21 @@ where
     }
 }
 
+pub fn dist_pt_pt<T>(p1: &Point<T>, p2: &Point<T>) -> T
+where
+    T: CoordFloat + FromPrimitive,
+{
+    let two = T::one() + T::one();
+    let theta1 = p1.y();
+    let theta2 = p2.y();
+    let delta_theta = p2.y() - p1.y();
+    let delta_lambda = p2.x() - p1.x();
+    let a = (delta_theta / two).sin().powi(2)
+        + theta1.cos() * theta2.cos() * (delta_lambda / two).sin().powi(2);
+
+    two * a.sqrt().asin()
+}
+
 // TODO: Update doc comments
 /// Calculate the great circle distance between a point `p` and a line segment
 /// defined by its two endpoints `p1` and `p2`. Inputs and outputs are in
@@ -83,7 +104,7 @@ where
 /// Adapted from: https://github.com/Turfjs/turf/blob/master/packages/turf-point-to-line-distance/index.ts
 pub fn dist_pt_line<T>(pt: &Point<T>, line: &Line<T>) -> T
 where
-    T: CoordFloat + FromPrimitive
+    T: CoordFloat + FromPrimitive,
 {
     // Projection logic is identical to the euclidean case,
     // but distance calc is different
@@ -102,15 +123,47 @@ where
 
     if param < T::zero() {
         // Closest to start point, so reduces to pt-pt
-        pt.haversine_distance(&line.start_point())
+        dist_pt_pt(pt, &line.start_point())
     } else if param > T::one() {
         // Closest to end point, so pt-pt again
-        pt.haversine_distance(&line.end_point())
+        dist_pt_pt(pt, &line.end_point())
     } else {
         // Here we project onto the segment
-        let projected = p(x1 + param * c, y1 + param * d);
-        pt.haversine_distance(&projected)
+        let projected = p!(x1 + param * c, y1 + param * d);
+        dist_pt_pt(pt, &projected)
     }
+}
+
+pub fn dist_pt_rect<T>(pt: &Point<T>, rect: &Rect<T>) -> T
+where
+    T: CoordFloat + FromPrimitive,
+{
+    let (x, y) = pt.x_y();
+
+    // Return early if the point is inside the line
+    if rect.contains(pt) {
+        return T::zero();
+    }
+
+    // Take the "left" edge whenever the point is to the left of the rect and
+    // the right edge whenever its to the right of the rect. This works even
+    // when diagonal to these edges as in these cases the closest point is the
+    // corner, which is shared with the other candidate line.
+    let line = if x < rect.min().x {
+        // smallest x-value
+        l!(rect.min().x, rect.min().y, rect.min().x, rect.max().y)
+    } else if x > rect.max().x {
+        // largest x-value
+        l!(rect.max().x, rect.min().y, rect.max().x, rect.max().y)
+    } else if y < rect.min().y {
+        // smallest y-value
+        l!(rect.min().x, rect.min().y, rect.max().x, rect.min().y)
+    } else {
+        // largest y-value as final case
+        l!(rect.min().x, rect.max().y, rect.max().x, rect.max().y)
+    };
+
+    dist_pt_line(pt, &line)
 }
 
 // Calculate Spherical bounds distances.
@@ -120,7 +173,7 @@ where
 // must be a separate shape in a composite.
 pub fn dist_rect_rect<T>(r1: &Rect<T>, r2: &Rect<T>) -> T
 where
-    T: CoordFloat + FromPrimitive
+    T: CoordFloat + FromPrimitive,
 {
     // Overlap logic works the same as Euclidean
     let overlap_x = r1.max().x >= r2.min().x && r2.max().x >= r1.min().x;
@@ -153,9 +206,9 @@ where
             let delta_xi = f64::from(Lng::from(r1.min().x) - Lng::from(r2.max().x)).abs();
 
             if delta_xa < delta_xi {
-                p(r1.max().x, lat).haversine_distance(&p(r2.min().x, lat))
+                dist_pt_pt(&p!(r1.max().x, lat), &p!(r2.min().x, lat))
             } else {
-                p(r1.min().x, lat).haversine_distance(&p(r2.max().x, lat))
+                dist_pt_pt(&p!(r1.min().x, lat), &p!(r2.max().x, lat))
             }
         },
         // When neither overlaps, take the distance from the closest
@@ -177,7 +230,7 @@ where
                 (r1.min().y, r2.max().y)
             };
 
-            p(x1, y1).haversine_distance(&p(x2, y2))
+            dist_pt_pt(&p!(x1, y1), &p!(x2, y2))
         },
     }
 }

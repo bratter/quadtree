@@ -3,7 +3,6 @@ use geo::Rect;
 use crate::Distance;
 pub use dist::DistEuclidean;
 
-/// Module containing Euclidean distance traits and impls
 mod dist;
 
 /// Module containing Euclidean coordinate math
