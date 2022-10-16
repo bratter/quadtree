@@ -1,26 +1,34 @@
+use std::marker::PhantomData;
+
+use geo::GeoNum;
+
 use super::*;
 
 // Iterator implementation for a quadtree
-pub struct QuadTreeIter<'a, D, N>
+pub struct QuadTreeIter<'a, D, N, T>
 where
-    N: Node<D>,
+    N: Node<D, T>,
+    T: GeoNum,
 {
     stack: Vec<&'a N>,
     children: Option<Vec<&'a D>>,
+    _num_type: PhantomData<T>,
 }
 
-impl<'a, D, N> QuadTreeIter<'a, D, N>
+impl<'a, D, N, T> QuadTreeIter<'a, D, N, T>
 where
-    N: Node<D>,
+    N: Node<D, T>,
+    T: GeoNum,
 {
     pub fn new(root: &'a N) -> Self {
-        Self { stack: vec![root], children: None }
+        Self { stack: vec![root], children: None, _num_type: PhantomData }
     }
 }
 
-impl<'a, D, N> Iterator for QuadTreeIter<'a, D, N>
+impl<'a, D, N, T> Iterator for QuadTreeIter<'a, D, N, T>
 where
-    N: Node<D>,
+    N: Node<D, T>,
+    T: GeoNum,
 {
     type Item = &'a D;
 

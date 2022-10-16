@@ -1,31 +1,45 @@
 mod datum;
 mod node;
 
-// TODO: Clean up imports/exports everywhere
-use geo::{Rect, Contains};
+use geo::{Rect, GeoFloat, GeoNum};
 use crate::*;
 pub use datum::*;
 use node::PointNode;
 use geom::Distance;
+use super::knn::knn;
 
 /// A quadtree implementation for points.
 #[derive(Debug)]
-pub struct PointQuadTree<D>
+pub struct PointQuadTree<D, T>
 where
-    D: PointDatum,
+    D: PointDatum<T>,
+    T: GeoNum,
 {
-    root: PointNode<D>,
+    root: PointNode<D, T>,
+
     // Maintain a count for size
     // Could calculate this each time, but it only saves usize memory
     size: usize,
 }
 
-impl<D> PointQuadTree<D>
+impl<D, T> PointQuadTree<D, T>
 where
-    D: PointDatum,
+    D: PointDatum<T>,
+    T: GeoNum,
 {
+    /// Create a new Point QuadTree.
+    pub fn new(bounds: Rect<T>, max_depth: u8, max_children: usize) -> Self {
+        PointQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
+    }
+
+    /// Create a new Point QuadTree using default values for max_depth and
+    /// max_children.
+    pub fn from_bounds(bounds: Rect<T>) -> Self {
+        PointQuadTree::private_new(bounds, None, None)
+    }
+
     // Private constructor
-    fn private_new(bounds: Rect, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
+    fn private_new(bounds: Rect<T>, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
         let max_children = max_children.unwrap_or(DEFAULT_MAX_CHILDREN);
 
@@ -36,21 +50,11 @@ where
     }
 }
 
-// TODO: When generalizing behavior...
-// Out of bounds insertion and retrieval behavior is up to the specific
-// implementation, and could even panic if required
-impl<D> QuadTree<D> for PointQuadTree<D>
+impl<D, T> QuadTree<D> for PointQuadTree<D, T>
 where
-    D: PointDatum,
+    D: PointDatum<T>,
+    T: GeoNum,
 {
-    fn new(bounds: Rect, max_depth: u8, max_children: usize) -> Self {
-        PointQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
-    }
-
-    fn default(bounds: Rect) -> Self {
-        PointQuadTree::private_new(bounds, None, None)
-    }
-
     fn size(&self) -> usize {
         self.size
     }
@@ -59,7 +63,8 @@ where
     // Here we assume that `root.insert` always succeeds so we can increment
     // count. This should work if the pt is in bounds
     fn insert(&mut self, pt: D) {
-        if self.root.bounds().contains(&pt.point()) {
+        // Cannot use Rect::contains here, see notes on pt_in_rect for why
+        if pt_in_rect(&self.root.bounds(), &pt.point()) {
             self.root.insert(pt);
             self.size += 1;
         }
@@ -68,7 +73,8 @@ where
     fn retrieve(&self, pt: &D) -> Vec<&D> {
         // Bounds check first - capturing out of bounds here
         // This trusts the Node implementation to act correctly
-        if self.root.bounds().contains(&pt.point()) {
+        // Cannot use Rect::contains here, see notes on pt_in_rect for why
+        if pt_in_rect(&self.root.bounds(), &pt.point()) {
             self.root.retrieve(pt)
         } else {
             vec![]
@@ -76,16 +82,18 @@ where
     }
 }
 
-impl<D> QuadTreeSearch<D> for PointQuadTree<D>
+// TODO: This and the trait should be sure to work with everything, so need to tighten the numeric constraints
+impl<D, T> QuadTreeSearch<D, T> for PointQuadTree<D, T>
 where
-    D: PointDatum,
+    D: Datum<T> + PointDatum<T>,
+    T: GeoFloat,
 {
-    fn find<T>(&self, cmp: &T) -> Option<(&D, f64)> 
+    fn find<X>(&self, cmp: &X) -> Option<(&D, T)> 
     where
-        T: Distance<D>
+        X: Distance<T>
     {
         let mut stack = vec![&self.root];
-        let mut min_dist = f64::INFINITY;
+        let mut min_dist =  T::from(f64::INFINITY).unwrap();
         let mut min_item: Option<&D> = None;
 
         while let Some(node) = stack.pop() {
@@ -98,7 +106,7 @@ where
             // Loop through all the children of the current node, retaining
             // only the currently closest child
             for child in node.children() {
-                let child_dist = cmp.dist_datum(child);
+                let child_dist = cmp.dist_geom(&child.geometry());
                 if child_dist < min_dist {
                     min_dist = child_dist;
                     min_item = Some(child);
@@ -116,29 +124,31 @@ where
         min_item.map(|item| (item, min_dist))
     }
 
-    fn knn<T>(&self, cmp: &T, k: usize, r: f64) -> Vec<(&D, f64)>
+    fn knn<X>(&self, cmp: &X, k: usize, r: T) -> Vec<(&D, T)>
     where
-        T: Distance<D>
+        X: Distance<T>
     {
         knn(&self.root, cmp, k, r)
     }
 }
 
-impl<'a, D> IntoIterator for &'a PointQuadTree<D>
+impl<'a, D, T> IntoIterator for &'a PointQuadTree<D, T>
 where
-    D: PointDatum,
+    D: PointDatum<T>,
+    T: GeoNum,
 {
     type Item = &'a D;
-    type IntoIter = QuadTreeIter<'a, D, PointNode<D>>;
+    type IntoIter = QuadTreeIter<'a, D, PointNode<D, T>, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         QuadTreeIter::new(&self.root)
     }
 }
 
-impl<D> std::fmt::Display for PointQuadTree<D>
+impl<D, T> std::fmt::Display for PointQuadTree<D, T>
 where
-    D: PointDatum,
+    D: PointDatum<T>,
+    T: GeoNum + std::fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Point Quadtree Root:")?;
@@ -166,7 +176,7 @@ mod tests {
     fn subdivide_occurs_at_max_children() {
         let origin: Point = Point::new(0.0, 0.0);
         let bounds = Rect::new(origin.0, coord!(x: 1.0, y: 1.0));
-        let mut qt = PointQuadTree::default(bounds);
+        let mut qt = PointQuadTree::from_bounds(bounds);
         
         // Using a data wrapper here
         let pt1 = MyData(0.1, 0.1);

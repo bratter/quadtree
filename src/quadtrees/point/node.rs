@@ -1,18 +1,29 @@
-use geo::{Rect, Coordinate};
+use std::marker::PhantomData;
+
+use geo::{Rect, Coordinate, GeoNum};
 use crate::*;
 
 #[derive(Debug)]
-pub struct PointNode<T: PointDatum> {
-    bounds: Rect,
+pub struct PointNode<D, T>
+where
+    D: PointDatum<T>,
+    T: GeoNum,
+{
+    bounds: Rect<T>,
     depth: u8,
     max_depth: u8,
     max_children: usize,
-    pub children: Vec<T>,
-    pub nodes: Option<Box<[PointNode<T>; 4]>>,
+    pub children: Vec<D>,
+    pub nodes: Option<Box<[PointNode<D, T>; 4]>>,
+    _num_type: PhantomData<T>,
 }
 
-impl<D: PointDatum> Node<D> for PointNode<D> {
-    fn new(bounds: Rect, depth: u8, max_depth: u8, max_children: usize) -> Self {
+impl<D, T> Node<D, T> for PointNode<D, T>
+where
+    D: PointDatum<T>,
+    T: GeoNum,
+{
+    fn new(bounds: Rect<T>, depth: u8, max_depth: u8, max_children: usize) -> Self {
         Self {
             bounds,
             depth,
@@ -20,20 +31,21 @@ impl<D: PointDatum> Node<D> for PointNode<D> {
             max_children,
             children: Vec::new(),
             nodes: None,
+            _num_type: PhantomData,
         }
     }
 
-    fn datum_position(datum: &D) -> Coordinate {
+    fn datum_position(datum: &D) -> Coordinate<T> {
         datum.point().0
     }
 
     // Getters
-    fn bounds(&self) -> &Rect { &self.bounds }
+    fn bounds(&self) -> &Rect<T> { &self.bounds }
     fn depth(&self) -> u8 { self.depth }
     fn max_depth(&self) -> u8 { self.max_depth }
     fn max_children(&self) -> usize { self.max_children }
     fn children(&self) -> Vec<&D> { self.children.iter().collect() }
-    fn nodes(&self) -> &Option<Box<[PointNode<D>; 4]>> { &self.nodes }
+    fn nodes(&self) -> &Option<Box<[PointNode<D, T>; 4]>> { &self.nodes }
 
     // Setters
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
@@ -88,7 +100,11 @@ impl<D: PointDatum> Node<D> for PointNode<D> {
     }
 }
 
-impl<D: PointDatum> std::fmt::Display for PointNode<D> {
+impl<D, T> std::fmt::Display for PointNode<D, T>
+where
+    D: PointDatum<T>,
+    T: GeoNum + std::fmt::Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display(f)
     }

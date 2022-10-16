@@ -1,6 +1,8 @@
 use core::ops::Deref;
-use geo::Rect;
-use crate::Distance;
+use std::marker::PhantomData;
+use geo::{Rect, GeoNum, GeoFloat};
+use num_traits::FromPrimitive;
+use crate::{Distance, Datum, Geometry};
 pub use dist::DistHaversine;
 
 mod dist;
@@ -18,35 +20,63 @@ pub mod math;
 /// Extracted as-is from geo-rust source
 pub const MEAN_EARTH_RADIUS: f64 = 6371008.8;
 
+// TODO: Replace Test with X throughout
 /// Convenience function to wrap a `Test` item with a Spherical geometry wrapper.
-pub fn sphere<Test>(test: Test) -> Spherical<Test> {
-    Spherical(test)
+pub fn sphere<Test, T>(test: Test) -> Spherical<Test, T>
+where
+    Test: Datum<T>,
+    T: GeoNum,
+{
+    Spherical(test, PhantomData)
 }
 
 /// Geometry wrapper type that implements Haversine distance formulas. 
-pub struct Spherical<Test> (Test);
+pub struct Spherical<Test, T> (Test, PhantomData<T>)
+where
+    Test: Datum<T>,
+    T: GeoNum;
 
-impl<Test> Spherical<Test> {
+impl<Test, T> Spherical<Test, T>
+where
+    Test: Datum<T>,
+    T: GeoNum,
+{
     /// Wrap a `Test` item with a Spherical geometry wrapper.
     pub fn new(t: Test) -> Self {
-        Self(t)
+        Self(t, PhantomData)
     }
 }
 
-impl<Test, Datum> Distance<Datum> for Spherical<Test>
+impl<Test, T> Distance<T> for Spherical<Test, T>
 where
-    Test: DistHaversine<f64, Datum> + DistHaversine<f64, Rect>,
+    Test: Datum<T>,
+    T: GeoFloat + FromPrimitive,
 {
-    fn dist_datum(&self, datum: &Datum) -> f64 {
-        self.dist_haversine(datum)
+    fn dist_datum(&self, datum: &dyn Datum<T>) -> T {
+        let test_geom = self.0.geometry();
+        let datum_geom = datum.geometry();
+
+        test_geom.dist_haversine(&datum_geom)
     }
 
-    fn dist_bbox(&self, bbox: &Rect) -> f64 {
-        self.dist_haversine(bbox)
+    fn dist_geom(&self, geom: &Geometry<T>) -> T {
+        let test_geom = self.0.geometry();
+
+        test_geom.dist_haversine(&geom)
+    }
+
+    fn dist_bbox(&self, bbox: &Rect<T>) -> T {
+        let test_geom = self.0.geometry();
+
+        bbox.dist_haversine(&test_geom)
     }
 }
 
-impl<Test> Deref for Spherical<Test> {
+impl<Test, T> Deref for Spherical<Test, T>
+where
+    Test: Datum<T>,
+    T: GeoNum,
+{
     type Target = Test;
 
     fn deref(&self) -> &Self::Target {

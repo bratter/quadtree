@@ -1,19 +1,30 @@
-use geo::{Rect, Coordinate, Contains, Intersects};
+use std::marker::PhantomData;
+
+use geo::{Rect, Coordinate, Intersects, BoundingRect, GeoNum};
 use crate::*;
 
 #[derive(Debug)]
-pub struct BoundsNode<D: BoundsDatum> {
-    bounds: Rect,
+pub struct BoundsNode<D, T>
+where
+    D: Datum<T>,
+    T: GeoNum,
+{
+    bounds: Rect<T>,
     depth: u8,
     max_depth: u8,
     max_children: usize,
     pub children: Vec<D>,
     pub stuck_children: Vec<D>,
-    pub nodes: Option<Box<[BoundsNode<D>; 4]>>,
+    pub nodes: Option<Box<[BoundsNode<D, T>; 4]>>,
+    _num_type: PhantomData<T>,
 }
 
-impl<D: BoundsDatum> Node<D> for BoundsNode<D> {
-    fn new(bounds: Rect, depth: u8, max_depth: u8, max_children: usize) -> Self {
+impl<D, T> Node<D, T> for BoundsNode<D, T>
+where
+    D: Datum<T>,
+    T: GeoNum,
+{
+    fn new(bounds: Rect<T>, depth: u8, max_depth: u8, max_children: usize) -> Self {
         Self {
             bounds,
             depth,
@@ -22,15 +33,20 @@ impl<D: BoundsDatum> Node<D> for BoundsNode<D> {
             children: Vec::new(),
             stuck_children: Vec::new(),
             nodes: None,
+            _num_type: PhantomData,
         }
     }
 
-    fn datum_position(datum: &D) -> Coordinate {
-        datum.bounds().center()
+    // TODO: This should return an option, giving the none if a bbox is not available
+    fn datum_position(datum: &D) -> Coordinate<T> {
+        let bbox = datum.geometry().bounding_rect().unwrap();
+        let two = T::one() + T::one();
+        
+        Coordinate { x: bbox.width() / two, y: bbox.height() / two }
     }
 
     // Getters
-    fn bounds(&self) -> &Rect { &self.bounds }
+    fn bounds(&self) -> &Rect<T> { &self.bounds }
     fn depth(&self) -> u8 { self.depth }
     fn max_depth(&self) -> u8 { self.max_depth }
     fn max_children(&self) -> usize { self.max_children }
@@ -54,8 +70,11 @@ impl<D: BoundsDatum> Node<D> for BoundsNode<D> {
                 let sub_node = &mut sub_nodes[sub_node_idx as usize];
 
                 // Now check if the datum is totally contained by the sub-node
-                // If not, it is a stuck child
-                if sub_node.bounds().contains(&datum.bounds()) {
+                // If not, it is a stuck child, noting that contains includes
+                // bordering, see notes in rect_in_rect for why
+                // TODO: Use is_ok when converting this to error on failure
+                let bbox = datum.geometry().bounding_rect().unwrap();
+                if rect_in_rect(sub_node.bounds(), &bbox) {
                     sub_node.insert(datum)
                 } else {
                     self.stuck_children.push(datum);
@@ -86,14 +105,16 @@ impl<D: BoundsDatum> Node<D> for BoundsNode<D> {
             Some(nodes) => {
                 let sub_node = &nodes[self.find_sub_node(datum) as usize];
 
-                if sub_node.bounds().contains(&datum.bounds()) {
+                // TODO: See note in mod about what to do re. errors here
+                let bbox = datum.geometry().bounding_rect().unwrap();
+                if rect_in_rect(sub_node.bounds(), &bbox) {
                     sub_node.retrieve(datum)
                 } else {
                     let mut inner = vec![];
                     // Return the entire contents of any overlapping node
                     // Same semantics as https://github.com/mikechambers/ExamplesByMesh/blob/master/JavaScript/QuadTree/src/QuadTree.js
                     for sub_node in &**nodes {
-                        if sub_node.bounds().intersects(&datum.bounds()) {
+                        if sub_node.bounds().intersects(&bbox) {
                             inner.extend(get_all_children(sub_node));
                         }
                     }
@@ -111,7 +132,11 @@ impl<D: BoundsDatum> Node<D> for BoundsNode<D> {
     }
 }
 
-impl<D: BoundsDatum> std::fmt::Display for BoundsNode<D> {
+impl<D, T> std::fmt::Display for BoundsNode<D, T>
+where
+    D: Datum<T>,
+    T: GeoNum + std::fmt::Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.display(f)
     }

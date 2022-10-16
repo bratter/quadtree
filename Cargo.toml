@@ -9,3 +9,6 @@ edition = "2021"
 geo = "0.23.0"
 num-traits = "0.2"
 rstar = "0.9.3"
+
+[dev-dependencies]
+approx = "0.5.1"

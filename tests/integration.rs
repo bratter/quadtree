@@ -1,13 +1,13 @@
+use approx::assert_abs_diff_eq;
 use geo::{Point, Rect, Line, EuclideanDistance, coord};
-use quadtree::{*, geom::spherical::math::dist_pt_pt};
-
-const EPSILON: f64 = 1e-6;
+use quadtree::*;
+use quadtree::spherical::math::dist_pt_pt;
 
 #[test]
 fn create_empty_retrieve_inside_bounds_returns_empty_vec() {
     let origin = Point::new(0.0, 0.0);
     let bounds = Rect::new(origin.0, coord! {x: 1.0, y: 1.0});
-    let qt = PointQuadTree::default(bounds);
+    let qt = PointQuadTree::from_bounds(bounds);
     let pt1 = Point::new(0.1, 0.1);
 
     assert_eq!(qt.size(), 0);
@@ -18,7 +18,7 @@ fn create_empty_retrieve_inside_bounds_returns_empty_vec() {
 fn create_and_retrieve_single_point_returns_vec_of_point() {
     let origin = Point::new(0.0, 0.0);
     let bounds = Rect::new(origin.0, coord! {x: 1.0, y: 1.0});
-    let mut qt = PointQuadTree::default(bounds);
+    let mut qt = PointQuadTree::from_bounds(bounds);
     let pt1 = Point::new(0.1, 0.1);
 
     qt.insert(pt1.clone());
@@ -31,7 +31,7 @@ fn create_and_retrieve_single_point_returns_vec_of_point() {
 fn insert_out_of_bounds_doesnt_add_and_retrieve_out_of_bounds_yields_none() {
     let origin = Point::new(0.0, 0.0);
     let bounds = Rect::new(origin.0, coord! {x: 1.0, y: 1.0});
-    let mut qt = PointQuadTree::default(bounds);
+    let mut qt = PointQuadTree::from_bounds(bounds);
     let pt1 = Point::new(0.1, 0.1);
     let pt2 = Point::new(2.0, 2.0);
 
@@ -46,7 +46,7 @@ fn insert_out_of_bounds_doesnt_add_and_retrieve_out_of_bounds_yields_none() {
 fn iterator_runs_preorder() {
     let origin = Point::new(0.0, 0.0);
     let bounds = Rect::new(origin.0, coord! {x: 1.0, y: 1.0});
-    let mut qt = PointQuadTree::default(bounds);
+    let mut qt = PointQuadTree::from_bounds(bounds);
     let pt1 = Point::new(0.1, 0.1);
     let pt2 = Point::new(0.2, 0.2);
     let pt3 = Point::new(0.1, 0.8);
@@ -122,7 +122,7 @@ fn find_returns_closest_in_spherical_for_point_qt() {
     let cmp = sphere(Point::new(0.4, 0.39));
     let (p, d) = qt.find(&cmp).unwrap();
     assert_eq!(p, &p2);
-    assert!((d - dist_pt_pt(&cmp, &p2)).abs() < EPSILON);
+    assert_abs_diff_eq!(d, dist_pt_pt(&cmp, &p2));
 }
 
 /// Helper function to construct a line segment.
@@ -159,14 +159,14 @@ fn find_returns_closest_in_euclidean_for_segments_in_bounds_qt() {
     let cmp = Euclidean::new(Point::new(0.1, 0.2));
     let cmp_dist = Point::new(0.1, 0.2).euclidean_distance(&line(0.3, 0.0, 0.0, 0.4));
     let (datum, dist) = qt.find(&cmp).unwrap();
-    assert!((dist - cmp_dist).abs() < EPSILON);
+    assert_abs_diff_eq!(dist, cmp_dist);
     assert_eq!(datum, &d1);
 
     
     // Closer to the random line
     let cmp = Euclidean::new(Point::new(0.8, 0.8));
     let (datum, dist) = qt.find(&cmp).unwrap();
-    assert!((dist - 0.1).abs() < EPSILON);
+    assert_abs_diff_eq!(dist, 0.1);
     assert_eq!(datum, &d5);
 }
 
@@ -188,7 +188,8 @@ fn find_returns_closest_in_speherical_in_bounds_qt() {
     let cmp = sphere(Point::new(-0.2, -0.2));
     let dist_cmp = dist_pt_pt(&Point::new(-0.2, -0.2), &Point::new(-0.4, -0.2));
     let (datum, dist) = qt.find(&cmp).unwrap();
-    assert!((dist - dist_cmp).abs() < EPSILON);
+
+    assert_abs_diff_eq!(dist, dist_cmp);
     assert_eq!(datum, &d1);
 }
 
@@ -214,9 +215,9 @@ fn knn_on_point_qt_returns_k_nodes_in_dist_order() {
     assert_eq!(res[0].0.x_y(), p3.x_y());
     assert_eq!(res[0].1, 1.0);
     assert_eq!(res[1].0.x_y(), p2.x_y());
-    assert!((res[1].1 - 13.0f64.sqrt()).abs() < EPSILON);
+    assert_abs_diff_eq!(res[1].1, 13.0f64.sqrt());
     assert_eq!(res[2].0.x_y(), p1.x_y());
-    assert!((res[2].1 - 5.0).abs() < EPSILON);
+    assert_abs_diff_eq!(res[2].1, 5.0);
 }
 
 #[test]
@@ -241,5 +242,5 @@ fn knn_on_point_qt_stops_at_r() {
     assert_eq!(res[0].0.x_y(), p3.x_y());
     assert_eq!(res[0].1, 1.0);
     assert_eq!(res[1].0.x_y(), p2.x_y());
-    assert!((res[1].1 - 13.0f64.sqrt()).abs() < EPSILON);
+    assert_abs_diff_eq!(res[1].1, 13.0f64.sqrt());
 }

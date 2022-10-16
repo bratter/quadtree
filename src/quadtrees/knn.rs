@@ -1,21 +1,29 @@
+use std::marker::PhantomData;
+
+use geo::GeoFloat;
+
 use crate::*;
 
-enum KnnType<'a, NodeType, D>
+enum KnnType<'a, NodeType, D, T>
 where
-    NodeType: Node<D>,
+    NodeType: Node<D, T>,
+    T: GeoFloat,
 {
     Node(&'a NodeType),
     Child(&'a D),
+    _NumType(PhantomData<T>),
 }
 
 // Private, general, knn function implementation that takes an explcit node
 // This gets around forcing Node to be object safe and doing priv-in-pub to
 // get access to the root node, as root is just passed here.
 // QT implementations can simply delegate to this function.
-pub(crate) fn knn<'a, D, N, X>(root: &'a N, cmp: &X, k: usize, r: f64) -> Vec<(&'a D, f64)>
+pub(crate) fn knn<'a, D, N, X, T>(root: &'a N, cmp: &X, k: usize, r: T) -> Vec<(&'a D, T)>
 where
-    N: Node<D>,
-    X: Distance<D>,
+    N: Node<D, T>,
+    D: Datum<T>,
+    X: Distance<T>,
+    T: GeoFloat,
 {
     // We work on a tuple that contains the distance plus an enum
     // containing either a child or a node, and start by seeding the root
@@ -53,7 +61,7 @@ where
 
             let children = node.children()
                 .into_iter()
-                .map(|child| (KnnType::Child(child), cmp.dist_datum(child)));
+                .map(|child| (KnnType::Child(child), cmp.dist_geom(&child.geometry())));
             work_stack.extend(children);
 
             if let Some(nodes) = node.nodes() {

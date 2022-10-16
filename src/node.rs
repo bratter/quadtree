@@ -1,4 +1,4 @@
-use geo::{Rect, Coordinate, coord};
+use geo::{Rect, Coordinate, coord, GeoNum};
 
 pub enum SubNode {
     TopLeft = 0,
@@ -7,17 +7,18 @@ pub enum SubNode {
     BottomLeft = 3,
 }
 
-pub trait Node<D>
+pub trait Node<D, T>
 where
-    Self: Sized
+    Self: Sized,
+    T: GeoNum,
 {
-    fn new(bounds: Rect, depth: u8, max_depth: u8, max_children: usize) -> Self;
+    fn new(bounds: Rect<T>, depth: u8, max_depth: u8, max_children: usize) -> Self;
 
     /// Get a single Coordinate position of the datum in a manner suitable for
     /// the constraints of the implementation.
-    fn datum_position(datum: &D) -> Coordinate;
+    fn datum_position(datum: &D) -> Coordinate<T>;
 
-    fn bounds(&self) -> &Rect;
+    fn bounds(&self) -> &Rect<T>;
 
     fn depth(&self) -> u8;
 
@@ -41,9 +42,9 @@ where
 
     fn find_sub_node(&self, datum: &D) -> SubNode {
         let (x, y) = Self::datum_position(datum).x_y();
-        let center = self.bounds().center();
-        let left = x <= center.x;
-        let top = y <= center.y;
+        let two = T::one() + T::one();
+        let left = x <= self.bounds().width() / two;
+        let top = y <= self.bounds().height() / two;
 
         if left && top { SubNode::TopLeft }
         else if !left && top { SubNode::TopRight }
@@ -57,8 +58,9 @@ where
         let md = self.max_depth();
         let mc = self.max_children();
         
-        let wh = bounds.width() / 2.0;
-        let hh = bounds.height() / 2.0;
+        let two = T::one() + T::one();
+        let wh = bounds.width() / two;
+        let hh = bounds.height() / two;
         
         let (x1, y1) = bounds.min().x_y();
         let (x2, y2) = (x1 + wh, y1 + hh);
@@ -73,7 +75,10 @@ where
         ])));
     }
 
-    fn display(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn display(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
+    where
+        T: std::fmt::Display,
+    {
         let indent = " ".repeat(self.depth() as usize * 4);
         let min = self.bounds().min();
         let count = self.children().len();
@@ -97,9 +102,10 @@ where
 }
 
 // TODO: Better to implement as iter on Node?
-pub(crate) fn get_all_children<N, D>(node: &N) -> Vec<&D>
+pub(crate) fn get_all_children<N, D, T>(node: &N) -> Vec<&D>
 where
-    N: Node<D>,
+    N: Node<D, T>,
+    T: GeoNum,
 {
     let mut children = node.children();
 
