@@ -59,14 +59,14 @@ where
         self.size
     }
 
-    // TODO: Should we use Error semantics on insert? Rust requires errors to be handled
-    // Here we assume that `root.insert` always succeeds so we can increment
-    // count. This should work if the pt is in bounds
-    fn insert(&mut self, pt: D) {
+    fn insert(&mut self, pt: D) -> Result<(), Error> {
         // Cannot use Rect::contains here, see notes on pt_in_rect for why
         if pt_in_rect(&self.root.bounds(), &pt.point()) {
-            self.root.insert(pt);
+            self.root.insert(pt)?;
             self.size += 1;
+            Ok(())
+        } else {
+            Err(Error::OutOfBounds)
         }
     }
 
@@ -192,17 +192,17 @@ mod tests {
         assert_eq!(root.nodes.is_none(), true);
         assert_eq!(root.children.len(), 0);
 
-        qt.insert(pt1);
-        qt.insert(pt1);
-        qt.insert(pt2);
-        qt.insert(pt3);
+        qt.insert(pt1).unwrap();
+        qt.insert(pt1).unwrap();
+        qt.insert(pt2).unwrap();
+        qt.insert(pt3).unwrap();
         
         // Insert four points, still no sub-nodes, but now four children
         let root = &qt.root;
         assert_eq!(root.nodes.is_none(), true);
         assert_eq!(root.children.len(), 4);
 
-        qt.insert(pt2);
+        qt.insert(pt2).unwrap();
 
         // Fifth point, now subdivided, with four in the first sub-node
         let root = &qt.root;
@@ -233,9 +233,9 @@ mod tests {
 
         let pt1 = MyData(0.1, 0.1);
         
-        qt.insert(pt1);
-        qt.insert(pt1);
-        qt.insert(pt1);
+        qt.insert(pt1).unwrap();
+        qt.insert(pt1).unwrap();
+        qt.insert(pt1).unwrap();
         
         // All points the same value should immediately max out the depth
         // With the value putting them all in the top left

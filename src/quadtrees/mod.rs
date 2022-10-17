@@ -3,7 +3,7 @@ pub mod point;
 pub mod bounds;
 mod knn;
 
-use crate::Distance;
+use crate::{Distance, Error};
 pub use datum::Datum;
 use geo::GeoFloat;
 
@@ -15,7 +15,7 @@ pub trait QuadTree<D> {
     /// Return the number of datums currently stored in the quadtree.
     fn size(&self) -> usize;
 
-    fn insert(&mut self, datum: D);
+    fn insert(&mut self, datum: D) -> Result<(), Error>;
 
     fn retrieve(&self, datum: &D) -> Vec<&D>;
 }
@@ -30,7 +30,7 @@ where
     /// 
     /// This will often require an `impl Distance<T> for X` block, which will
     /// be trivial in most cases, as it can delegate to the underlying geometry.
-    /// TODO: If this ernds up returning an error instead, can make of the err enums a replacement for the unwrap here and in knn
+    /// TODO: If this ends up returning an error instead, can make of the err enums a replacement for the unwrap here and in knn
     fn find<X>(&self, cmp: &X) -> Option<(&D, T)>
     where
         X: Distance<T>,

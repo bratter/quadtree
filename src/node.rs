@@ -1,5 +1,7 @@
 use geo::{Rect, Coordinate, coord, GeoNum};
 
+use crate::Error;
+
 pub enum SubNode {
     TopLeft = 0,
     TopRight = 1,
@@ -36,7 +38,7 @@ where
 
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>);
 
-    fn insert(&mut self, datum: D);
+    fn insert(&mut self, datum: D) -> Result<(), Error>;
 
     fn retrieve(&self, datum: &D) -> Vec<&D>;
 

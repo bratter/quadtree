@@ -57,15 +57,15 @@ fn euclidean_point_example() {
     // Here we loop data into the qt, these should all succeed with an empty ok
     // Borrow here so we can refer to the members later.
     for d in &data {
-        // TODO: Confirm that inserts return Ok(())
-        qt.insert(d.clone());
+        // This will panic if not Ok
+        qt.insert(d.clone()).unwrap();
     }
     assert_eq!(qt.size(), 9);
 
     // Inserting a datum that is outside the bounds produces an error
     // and doesn't increment the count
-    // TODO: Confirm this is Err(SomeEnumValue)
-    // let res = qt.insert(datum(999, -1.0, -1.0));
+    let res = qt.insert(datum(999, -1.0, -1.0));
+    assert_eq!(res, Err(Error::OutOfBounds));
     assert_eq!(qt.size(), 9);
 
     // Print the resulting quadtree

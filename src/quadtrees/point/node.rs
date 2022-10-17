@@ -50,7 +50,7 @@ where
     // Setters
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
 
-    fn insert(&mut self, datum: D) {
+    fn insert(&mut self, datum: D) -> Result<(), Error> {
         // Take ownership of the sub-nodes before matching to enable the insertion
         // This, apparently, is a very common pattern
         // Works here because we replace the nodes at the end, and the None branch
@@ -60,7 +60,7 @@ where
             // If we have sub-nodes already, pass down the tree
             Some(mut sub_nodes) => {
                 let sub_node_idx = self.find_sub_node(&datum);
-                sub_nodes[sub_node_idx as usize].insert(datum);
+                sub_nodes[sub_node_idx as usize].insert(datum)?;
                 
                 // Make sure to replace the nodes
                 self.nodes = Some(sub_nodes);
@@ -77,13 +77,15 @@ where
                 children.push(datum);
 
                 // Now consume the original children vector
-                for pt in children { self.insert(pt); }
+                for pt in children { self.insert(pt)?; }
             }
             // Otherwise can simply push the point
             None => {
                 self.children.push(datum);
             }
         }
+
+        Ok(())
     }
 
     // Pulls all children within the node that would contain the passed point

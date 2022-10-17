@@ -37,12 +37,14 @@ where
         }
     }
 
-    // TODO: This should return an option, giving the none if a bbox is not available
     fn datum_position(datum: &D) -> Coordinate<T> {
+        // SAFETY: Unwrap here is Ok because bbox generation is required to
+        // insert, and we ensure it returns before this is called on insertion
         let bbox = datum.geometry().bounding_rect().unwrap();
+        let (x, y) = bbox.min().x_y();
         let two = T::one() + T::one();
         
-        Coordinate { x: bbox.width() / two, y: bbox.height() / two }
+        Coordinate { x: x + bbox.width() / two, y: y + bbox.height() / two }
     }
 
     // Getters
@@ -58,24 +60,30 @@ where
     // Setters
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
 
-    fn insert(&mut self, datum: D) {
+    fn insert(&mut self, datum: D) -> Result<(), Error> {
         // See notes in the PointQuadTree implementation on take
         match self.nodes.take() {
             // If we have sub-nodes already, pass down the tree
             // Also works for stuck nodes, will be pushed down as far as they can go 
             Some(mut sub_nodes) => {
+                // Generate the bounding box for the geometry, which may fail
+                // SAFTEY: Do this before find_sub_node to ensure bbox fails
+                // are captured and the unwrap in find_sub_ndoe won't trigger
+                let bbox = datum
+                    .geometry()
+                    .bounding_rect()
+                    .ok_or(Error::CannotMakeBbox)?;
+
                 // Get the index of the datum - will be based on the datum's
                 // top-left point from its bounds
                 let sub_node_idx = self.find_sub_node(&datum);
                 let sub_node = &mut sub_nodes[sub_node_idx as usize];
 
-                // Now check if the datum is totally contained by the sub-node
+                // Check if the datum is totally contained by the sub-node
                 // If not, it is a stuck child, noting that contains includes
                 // bordering, see notes in rect_in_rect for why
-                // TODO: Use is_ok when converting this to error on failure
-                let bbox = datum.geometry().bounding_rect().unwrap();
                 if rect_in_rect(sub_node.bounds(), &bbox) {
-                    sub_node.insert(datum)
+                    sub_node.insert(datum)?
                 } else {
                     self.stuck_children.push(datum);
                 }
@@ -92,11 +100,13 @@ where
                 children.push(datum);
 
                 // Re-insert all children
-                for pt in children { self.insert(pt); }
+                for pt in children { self.insert(pt)?; }
             }
             // Otherwise can simply push the point
             None => self.children.push(datum)
         }
+
+        Ok(())
     }
 
     fn retrieve(&self, datum: &D) -> Vec<&D> {

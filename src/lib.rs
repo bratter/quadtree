@@ -4,9 +4,9 @@
  * Multiple quadtree implementations for various geometries.
  * 
  * TODO: Replace the Option return on find with Error, and an error enum: TestOutOfBounds, EmptyQuadTree, NoneInRadius - knn can return an out of bounds error also
- * TODO: Should we use Error semantics for insertion? Probably yes
  * TODO: Consumers need an easy time of sending radians into dist - perhaps just to_radians on Point is fine?
- * TODO: Distance sorted iterator, retrieve as an iterator
+ * TODO: Distance sorted iterator
+ * TODO: Retrieve as an iterator that doesn't error, just straight to non if out of bounds, or bbox fails
  * TODO: Document or test that retrieve.filter can give intersections or contains; convert retrieve to an iterator?
  * TODO: Write documentation for everything
  * TODO: Add more Haversine implementations for Spherical math
@@ -23,6 +23,7 @@ mod geom;
 mod quadtrees;
 mod node;
 mod iter;
+mod error;
 
 use geom::*;
 use node::*;
@@ -32,6 +33,7 @@ use iter::*;
 pub use quadtrees::*;
 pub use quadtrees::point::*;
 pub use quadtrees::bounds::*;
+pub use error::*;
 
 // Export geometry items
 pub use geom::geometry::*;

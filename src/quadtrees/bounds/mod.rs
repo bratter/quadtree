@@ -49,7 +49,6 @@ where
     }
 }
 
-// TODO: Error on insert
 impl<D, T> QuadTree<D> for BoundsQuadTree<D, T>
 where
     D: Datum<T>,
@@ -59,16 +58,21 @@ where
         self.size
     }
 
-    fn insert(&mut self, datum: D) {
+    fn insert(&mut self, datum: D) -> Result<(), Error> {
         // Bounds check - discard nodes that are not completely contained
         let qb = self.root.bounds();
-        // TODO: When we convert to this retuning errors use ok_or instead of unwrap
-        let db = &datum.geometry().bounding_rect().unwrap();
+        let db = &datum
+            .geometry()
+            .bounding_rect()
+            .ok_or(Error::CannotMakeBbox)?;
 
         // Cannot use Rect::contains here, see notes on rect_in_rect for why
         if rect_in_rect(qb, db) {
-            self.root.insert(datum);
+            self.root.insert(datum)?;
             self.size += 1;
+            Ok(())
+        } else {
+            Err(Error::OutOfBounds)
         }
     }
 
@@ -182,7 +186,7 @@ mod tests {
         let mut qt = BoundsQuadTree::new(bounds, 2, 2);
 
         // In root[TL][TL]
-        let b1 = b(1.0, 1.0, 1.0, 1.0);
+        let b1 = b(1.0, 1.0, 0.0, 0.0);
         // In root[TL][BR]
         let b2 = b(3.0, 3.0, 1.0, 1.0);
         // Stuck in root[TL]
@@ -194,13 +198,13 @@ mod tests {
         // In root[BR]
         let b6 = b(6.0, 5.0, 1.0, 1.0);
 
-        qt.insert(b1.clone());
-        qt.insert(b1.clone());
-        qt.insert(b2.clone());
-        qt.insert(b3.clone());
-        qt.insert(b4.clone());
-        qt.insert(b5.clone());
-        qt.insert(b6.clone());
+        qt.insert(b1.clone()).unwrap();
+        qt.insert(b1.clone()).unwrap();
+        qt.insert(b2.clone()).unwrap();
+        qt.insert(b3.clone()).unwrap();
+        qt.insert(b4.clone()).unwrap();
+        qt.insert(b5.clone()).unwrap();
+        qt.insert(b6.clone()).unwrap();
 
         // Dropping into an empty node returns only the one stuck on root
         let cmp = b(1.0, 5.0, 1.0, 1.0);

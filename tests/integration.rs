@@ -21,23 +21,24 @@ fn create_and_retrieve_single_point_returns_vec_of_point() {
     let mut qt = PointQuadTree::from_bounds(bounds);
     let pt1 = Point::new(0.1, 0.1);
 
-    qt.insert(pt1.clone());
+    qt.insert(pt1.clone()).unwrap();
 
     assert_eq!(qt.size(), 1);
     assert_eq!(qt.retrieve(&pt1), vec![&pt1]);
 }
 
 #[test]
-fn insert_out_of_bounds_doesnt_add_and_retrieve_out_of_bounds_yields_none() {
+fn insert_out_of_bounds_doesnt_add_and_retrieve_out_of_bounds_yields_error() {
     let origin = Point::new(0.0, 0.0);
     let bounds = Rect::new(origin.0, coord! {x: 1.0, y: 1.0});
     let mut qt = PointQuadTree::from_bounds(bounds);
     let pt1 = Point::new(0.1, 0.1);
     let pt2 = Point::new(2.0, 2.0);
 
-    qt.insert(pt1.clone());
-    qt.insert(pt2.clone());
+    qt.insert(pt1.clone()).unwrap();
+    let res = qt.insert(pt2.clone());
 
+    assert_eq!(res, Err(Error::OutOfBounds));
     assert_eq!(qt.size(), 1);
     assert_eq!(qt.retrieve(&pt2).len(), 0);
 }
@@ -52,12 +53,12 @@ fn iterator_runs_preorder() {
     let pt3 = Point::new(0.1, 0.8);
 
     // Inserting in a random order
-    qt.insert(pt3.clone());
-    qt.insert(pt1.clone());
-    qt.insert(pt2.clone());
-    qt.insert(pt1.clone());
-    qt.insert(pt2.clone());
-    qt.insert(pt1.clone());
+    qt.insert(pt3.clone()).unwrap();
+    qt.insert(pt1.clone()).unwrap();
+    qt.insert(pt2.clone()).unwrap();
+    qt.insert(pt1.clone()).unwrap();
+    qt.insert(pt2.clone()).unwrap();
+    qt.insert(pt1.clone()).unwrap();
 
     assert_eq!(qt.size(), 6);
 
@@ -90,11 +91,11 @@ fn find_returns_closest_in_eucildean_for_point_qt() {
     let p3 = Point::new(0.1, 0.1);
     let p4 = Point::new(0.8, 0.8);
 
-    qt.insert(p1.clone());
-    qt.insert(p2.clone());
-    qt.insert(p3.clone());
-    qt.insert(p4.clone());
-    qt.insert(p4.clone());
+    qt.insert(p1.clone()).unwrap();
+    qt.insert(p2.clone()).unwrap();
+    qt.insert(p3.clone()).unwrap();
+    qt.insert(p4.clone()).unwrap();
+    qt.insert(p4.clone()).unwrap();
 
     let cmp = eucl(Point::new(0.4, 0.39));
     assert_eq!(qt.find(&cmp).unwrap(), (&p1, 0.19));
@@ -111,11 +112,11 @@ fn find_returns_closest_in_spherical_for_point_qt() {
     let p3 = Point::new(0.1, 0.1);
     let p4 = Point::new(0.8, 0.8);
 
-    qt.insert(p1.clone());
-    qt.insert(p2.clone());
-    qt.insert(p3.clone());
-    qt.insert(p4.clone());
-    qt.insert(p4.clone());
+    qt.insert(p1.clone()).unwrap();
+    qt.insert(p2.clone()).unwrap();
+    qt.insert(p3.clone()).unwrap();
+    qt.insert(p4.clone()).unwrap();
+    qt.insert(p4.clone()).unwrap();
 
     // Make this slightly closer to the x axis
     // Then in spherical the distance is closer to the other point
@@ -145,11 +146,11 @@ fn find_returns_closest_in_euclidean_for_segments_in_bounds_qt() {
     // In the TR
     let d5 = line(0.9, 0.8, 0.9, 0.9);
 
-    qt.insert(d1.clone());
-    qt.insert(d2.clone());
-    qt.insert(d3.clone());
-    qt.insert(d4.clone());
-    qt.insert(d5.clone());
+    qt.insert(d1.clone()).unwrap();
+    qt.insert(d2.clone()).unwrap();
+    qt.insert(d3.clone()).unwrap();
+    qt.insert(d4.clone()).unwrap();
+    qt.insert(d5.clone()).unwrap();
 
     // Closer to the y-axis
     let cmp = Euclidean::new(Point::new(0.05, 0.1));
@@ -181,8 +182,8 @@ fn find_returns_closest_in_speherical_in_bounds_qt() {
     let d1 = Line::new(coord!(x: -0.4, y: 0.0), coord!(x: -0.4, y: -0.4));
     let d2 = Line::new(coord!(x: 0.0, y: -0.4), coord!(x: -0.4, y: -0.4));
 
-    qt.insert(d1.clone());
-    qt.insert(d2.clone());
+    qt.insert(d1.clone()).unwrap();
+    qt.insert(d2.clone()).unwrap();
 
     // Should be closer to the vertical line due to curvature
     let cmp = sphere(Point::new(-0.2, -0.2));
@@ -203,10 +204,10 @@ fn knn_on_point_qt_returns_k_nodes_in_dist_order() {
     let p2 = Point::new(3.0, 3.0);
     let p3 = Point::new(6.0, 6.0);
 
-    qt.insert(p1.clone());
-    qt.insert(p1.clone());
-    qt.insert(p2.clone());
-    qt.insert(p3.clone());
+    qt.insert(p1.clone()).unwrap();
+    qt.insert(p1.clone()).unwrap();
+    qt.insert(p2.clone()).unwrap();
+    qt.insert(p3.clone()).unwrap();
 
     let cmp = Euclidean::new(Point::new(6.0, 5.0));
     let res = qt.knn_r(&cmp, 3, f64::INFINITY);
@@ -230,10 +231,10 @@ fn knn_on_point_qt_stops_at_r() {
     let p2 = Point::new(3.0, 3.0);
     let p3 = Point::new(6.0, 6.0);
 
-    qt.insert(p1.clone());
-    qt.insert(p1.clone());
-    qt.insert(p2.clone());
-    qt.insert(p3.clone());
+    qt.insert(p1.clone()).unwrap();
+    qt.insert(p1.clone()).unwrap();
+    qt.insert(p2.clone()).unwrap();
+    qt.insert(p3.clone()).unwrap();
 
     let cmp = Euclidean::new(Point::new(6.0, 5.0));
     let res = qt.knn_r(&cmp, 3, 4.0);
