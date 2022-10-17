@@ -131,7 +131,7 @@ where
 
                 if cmp.dist_bbox(&bbox) > min_dist { continue; }
 
-                let child_dist = cmp.dist_datum(child);
+                let child_dist = cmp.dist_geom(&child.geometry());
                 // See notes in point about <= usage
                 if child_dist <= min_dist {
                     min_dist = child_dist;

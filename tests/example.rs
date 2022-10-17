@@ -144,11 +144,49 @@ fn euclidean_point_example() {
     let cmp = eucl(p(14.0, 14.0));
     let res = qt.knn_r(&cmp, 3, 0.5).unwrap();
     assert_eq!(res, vec![]);
-
-    println!("{qt}");
 }
 
 #[test]
 fn spherical_point_example() {
     // TODO: Build out this example
+
+    // CRITICAL NOTE: While it is irrelevant for insert/retrieve, all search
+    // calcs both take and return all corrdinates in radians, not degrees!!
+    // All supported geo-types provide a to_radians and a to_radians_in_place
+    // method to easily convert standard degree representations to radians
+
+    // Setup for Spherical works exactly the same way
+    // Here we will just drop Points in as the Datum, noting that Point
+    // already implements Datum and PointDatum
+    let bounds = r(0.0, 0.0, 90.0, 90.0).to_radians();
+    let mut qt = PointQuadTree::new(bounds, 4, 2);
+
+    let data = vec![
+        p(0.0, 0.0).to_radians(),
+        p(0.0, 50.0).to_radians(),
+        p(45.0, 45.0).to_radians(),
+        p(39.0, 42.0).to_radians(),
+        p(21.0, 32.0).to_radians(),
+    ];
+
+    for d in &data {
+        qt.insert(d.clone()).unwrap();
+    }
+
+    // Here we wrap our comparisons in Spherical instead of Euclidean
+    // Moving around y == 0 (the "equator") is simply the difference
+    // in radians
+    let cmp = sphere(p(22.5, 0.0).to_radians());
+    let (res, d) = qt.find(&cmp).unwrap();
+    assert_eq!(res, &data[0]);
+    assert_abs_diff_eq!(d, std::f64::consts::FRAC_PI_8);
+
+    // ...and same with anything on the same lng line
+    // Note the radian conversions in both
+    let cmp = sphere(p(45.0, 67.5).to_radians());
+    let (res, d) = qt.find(&cmp).unwrap();
+    assert_eq!(res, &data[2]);
+    assert_abs_diff_eq!(d, std::f64::consts::FRAC_PI_8);
+
+    println!("{}", qt);
 }

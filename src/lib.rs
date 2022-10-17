@@ -41,3 +41,4 @@ pub use geom::euclidean;
 pub use geom::euclidean::*;
 pub use geom::spherical;
 pub use geom::spherical::*;
+pub use geom::spherical::to_radians::*;

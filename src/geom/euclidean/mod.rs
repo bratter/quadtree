@@ -21,7 +21,8 @@ where
     Euclidean(test, PhantomData)
 }
 
-/// Geometry wrapper type that implements Euclidean distance formulas. 
+/// Geometry wrapper type that implements Euclidean distance formulas.
+#[derive(Debug)]
 pub struct Euclidean<Test, T> (Test, PhantomData<T>)
 where
     Test: Datum<T>,
@@ -38,20 +39,11 @@ where
     }
 }
 
-// TODO: This change has to go onto the sphericals as well
 impl<Test, T> Distance<T> for Euclidean<Test, T>
 where
     Test: Datum<T>,
     T: GeoFloat + FloatConst + Signed + RTreeNum,
 {
-    // TODO: Remove
-    fn dist_datum(&self, datum: &dyn Datum<T>) -> T {
-        let test_geom = self.0.geometry();
-        let datum_geom = datum.geometry();
-
-        test_geom.dist_euclidean(&datum_geom)
-    }
-
     fn dist_geom(&self, geom: &Geometry<T>) -> T {
         let test_geom = self.0.geometry();
 

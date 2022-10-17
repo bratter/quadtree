@@ -1,6 +1,8 @@
 use std::f64::consts::PI;
 use std::ops::{Add, Sub};
-use geo::{Point, Line, Rect, GeoFloat, Contains, coord};
+use geo::{Point, Line, Rect, GeoFloat, coord};
+
+use crate::geom::pt_in_rect;
 
 /// Helper macro for making points
 macro_rules! p {
@@ -139,8 +141,9 @@ where
 {
     let (x, y) = pt.x_y();
 
-    // Return early if the point is inside the line
-    if rect.contains(pt) {
+    // Return early if the point is inside the rect
+    // Can't use contains here, see notes on pt_in_rect
+    if pt_in_rect(rect, pt) {
         return T::zero();
     }
 

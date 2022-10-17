@@ -7,8 +7,8 @@ pub use dist::DistHaversine;
 
 mod dist;
 
-/// Module containing spherical coordinate math
 pub mod math;
+pub mod to_radians;
 
 /// Mean radius of Earth in meters
 /// This is the value recommended by the IUGG:
@@ -30,7 +30,8 @@ where
     Spherical(test, PhantomData)
 }
 
-/// Geometry wrapper type that implements Haversine distance formulas. 
+/// Geometry wrapper type that implements Haversine distance formulas.
+#[derive(Debug)]
 pub struct Spherical<Test, T> (Test, PhantomData<T>)
 where
     Test: Datum<T>,
@@ -52,13 +53,6 @@ where
     Test: Datum<T>,
     T: GeoFloat + FromPrimitive,
 {
-    fn dist_datum(&self, datum: &dyn Datum<T>) -> T {
-        let test_geom = self.0.geometry();
-        let datum_geom = datum.geometry();
-
-        test_geom.dist_haversine(&datum_geom)
-    }
-
     fn dist_geom(&self, geom: &Geometry<T>) -> T {
         let test_geom = self.0.geometry();
 

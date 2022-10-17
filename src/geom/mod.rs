@@ -1,6 +1,6 @@
 use geo::{Rect, Point, GeoNum};
 
-use crate::{Datum, Geometry};
+use crate::Geometry;
 
 // Module declarations
 pub mod geometry;
@@ -20,17 +20,12 @@ pub mod spherical;
 /// it is necessary is in the wrapper types. However any consumer can implement
 /// custom distance calcs on any type they wish, so is still part of the public
 /// API.
-/// TODO: This needs to take a T
 pub trait Distance<T>
 where
     T: GeoNum,
 {
-    // TODO: This can probably just be dist_geom, and we don't need datum here at all
-    /// Calculate the distance between a datum `D` and the test type
+    /// Calculate the distance between an allowed Geometry and the test type
     /// implementing this trait.
-    fn dist_datum(&self, datum: &dyn Datum<T>) -> T;
-
-
     fn dist_geom(&self, geom: &Geometry<T>) -> T;
 
     /// Calculate the distance between a geo::Rect` and the test type
