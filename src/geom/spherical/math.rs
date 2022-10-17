@@ -239,7 +239,6 @@ mod tests {
     use std::f64::consts::*;
     use approx::assert_abs_diff_eq;
     use geo::{Point, Rect};
-    use crate::DistHaversine;
 
     use super::*;
 
@@ -283,54 +282,54 @@ mod tests {
 
         // Test an overlap
         let b2 = Rect::new(p!(0.2, 0.0), p!(1.0 , 0.8));
-        assert_eq!(b1.dist_haversine(&b2), 0.0);
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), 0.0);
         
         // Test touching
         let b2 = Rect::new(p!(0.5, 0.0), p!(0.6 , 0.2));
-        assert_eq!(b1.dist_haversine(&b2), 0.0);
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), 0.0);
 
         // Test lat above - simple as the distance should just be the delta in radians
         let b2 = Rect::new(p!(0.1, 0.6), p!(0.3 , 0.8));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), 0.2);
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), 0.2);
 
         // Test lat below
         let b2 = Rect::new(p!(0.1, -0.4), p!(0.3 , -0.5));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), 0.3);
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), 0.3);
 
         // Test lng greater than, min dist @ 0.4, b2 ends higher
         let b2 = Rect::new(p!(0.6, 0.2), p!(0.8 , 0.6));
-        let d = p!(0.5, 0.4).dist_haversine(&p!(0.6, 0.4));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), d);
+        let d = dist_pt_pt(&p!(0.5, 0.4), &p!(0.6, 0.4));
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
         
         // Test lng greater than, min dist @ -0.1, b2 starts lower
         let b2 = Rect::new(p!(0.7, -0.2), p!(0.8, -0.1));
-        let d = p!(0.5, -0.1).dist_haversine(&p!(0.7, -0.1));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), d);
+        let d = dist_pt_pt(&p!(0.5, -0.1), &p!(0.7, -0.1));
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
         
         // Test lng less than - min dist @ 0.3, b1 ends higher
         let b2 = Rect::new(p!(-0.2, 0.0), p!(-0.1, 0.3));
-        let d = p!(0.1, 0.3).dist_haversine(&p!(-0.1, 0.3));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), d);
+        let d = dist_pt_pt(&p!(0.1, 0.3), &p!(-0.1, 0.3));
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
         
         // Test corner - top left
         let b2 = Rect::new(p!(-0.2, -0.3), p!(-0.1, -0.2));
-        let d = p!(0.1, -0.1).dist_haversine(&p!(-0.1, -0.2));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), d);
+        let d = dist_pt_pt(&p!(0.1, -0.1), &p!(-0.1, -0.2));
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
 
         // Test corner - top right
         let b2 = Rect::new(p!(0.8, -0.4), p!(0.9, -0.3));
-        let d = p!(0.5, -0.1).dist_haversine(&p!(0.8, -0.3));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), d);
+        let d = dist_pt_pt(&p!(0.5, -0.1), &p!(0.8, -0.3));
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
 
         // Test corner - bottom right
         let b2 = Rect::new(p!(0.9, 0.6), p!(1.0, 0.7));
-        let d = p!(0.5, 0.4).dist_haversine(&p!(0.9, 0.6));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), d);
+        let d = dist_pt_pt(&p!(0.5, 0.4), &p!(0.9, 0.6));
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
 
         // Test corner - bottom left
         let b2 = Rect::new(p!(-0.8, 0.7), p!(-0.6, 0.8));
-        let d = p!(0.1, 0.4).dist_haversine(&p!(-0.6, 0.7));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), d);
+        let d = dist_pt_pt(&p!(0.1, 0.4), &p!(-0.6, 0.7));
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
     }
     
     #[test]
@@ -339,12 +338,12 @@ mod tests {
 
         // Test overlapping latitude
         let b2 = Rect::new(p!(-3.0, 0.1), p!(-2.9, 0.3));
-        let d = p!(3.0, 0.3).dist_haversine(&p!(-3.0, 0.3));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), d);
+        let d = dist_pt_pt(&p!(3.0, 0.3), &p!(-3.0, 0.3));
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
 
         // Test corner
         let b2 = Rect::new(p!(-2.8, -0.4), p!(-2.7, -0.2));
-        let d = p!(3.0, 0.0).dist_haversine(&p!(-2.8, 0.2));
-        assert_abs_diff_eq!(b1.dist_haversine(&b2), d);
+        let d = dist_pt_pt(&p!(3.0, 0.0), &p!(-2.8, 0.2));
+        assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
     }
 }

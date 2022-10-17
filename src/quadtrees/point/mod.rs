@@ -82,18 +82,17 @@ where
     }
 }
 
-// TODO: This and the trait should be sure to work with everything, so need to tighten the numeric constraints
 impl<D, T> QuadTreeSearch<D, T> for PointQuadTree<D, T>
 where
     D: Datum<T> + PointDatum<T>,
     T: GeoFloat,
 {
-    fn find<X>(&self, cmp: &X) -> Option<(&D, T)> 
+    fn find_r<X>(&self, cmp: &X, r: T) -> Option<(&D, T)> 
     where
         X: Distance<T>
     {
         let mut stack = vec![&self.root];
-        let mut min_dist =  T::from(f64::INFINITY).unwrap();
+        let mut min_dist = r;
         let mut min_item: Option<&D> = None;
 
         while let Some(node) = stack.pop() {
@@ -107,7 +106,11 @@ where
             // only the currently closest child
             for child in node.children() {
                 let child_dist = cmp.dist_geom(&child.geometry());
-                if child_dist < min_dist {
+                // Using <= here so points at a distance equal to r will be
+                // returned, but this also slightly changes which Datum will
+                // be returned if they are equal distances away. This is fine
+                // as we only promise to return an arbitrary closest Datum
+                if child_dist <= min_dist {
                     min_dist = child_dist;
                     min_item = Some(child);
                 }
@@ -124,7 +127,7 @@ where
         min_item.map(|item| (item, min_dist))
     }
 
-    fn knn<X>(&self, cmp: &X, k: usize, r: T) -> Vec<(&D, T)>
+    fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Vec<(&D, T)>
     where
         X: Distance<T>
     {

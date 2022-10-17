@@ -4,7 +4,7 @@ use geo::GeoNum;
 
 use super::*;
 
-// Iterator implementation for a quadtree
+// Preorder iterator implementation for a quadtree
 pub struct QuadTreeIter<'a, D, N, T>
 where
     N: Node<D, T>,

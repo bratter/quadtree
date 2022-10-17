@@ -89,12 +89,12 @@ where
     D: Datum<T>,
     T: GeoFloat,
 {
-    fn find<X>(&self, cmp: &X) -> Option<(&D, T)> 
+    fn find_r<X>(&self, cmp: &X, r: T) -> Option<(&D, T)> 
     where
         X: Distance<T>
     {
         let mut stack = vec![&self.root];
-        let mut min_dist = T::from(f64::INFINITY).unwrap();
+        let mut min_dist = r;
         let mut min_item: Option<&D> = None;
 
         while let Some(node) = stack.pop() {
@@ -114,7 +114,8 @@ where
                 if cmp.dist_bbox(&bbox) > min_dist { continue; }
 
                 let child_dist = cmp.dist_datum(child);
-                if child_dist < min_dist {
+                // See notes in point about <= usage
+                if child_dist <= min_dist {
                     min_dist = child_dist;
                     min_item = Some(child);
                 }
@@ -131,7 +132,7 @@ where
         min_item.map(|item| (item, min_dist))
     }
 
-    fn knn<X>(&self, cmp: &X, k: usize, r: T) -> Vec<(&D, T)>
+    fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Vec<(&D, T)>
     where
         X: Distance<T>
     {

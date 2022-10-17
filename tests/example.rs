@@ -64,7 +64,7 @@ fn euclidean_point_example() {
 
     // Inserting a datum that is outside the bounds produces an error
     // and doesn't increment the count
-    // TODO: Confirm this
+    // TODO: Confirm this is Err(SomeEnumValue)
     // let res = qt.insert(datum(999, -1.0, -1.0));
     assert_eq!(qt.size(), 9);
 
@@ -115,10 +115,40 @@ fn euclidean_point_example() {
     assert_eq!(res, &data[0]);
     assert_abs_diff_eq!(d, 0.0);
 
+    // We can of course drop a datum in directly
+    let cmp = eucl(data[1].clone());
+    let (res, d) = qt.find(&cmp).unwrap();
+    assert_eq!(res, &data[1]);
+    assert_abs_diff_eq!(d, 0.0);
+
+    // Using the eucl() wrapper function (or Euclidean::new) does distance
+    // comparisons using Euclidean math
+    let cmp = Euclidean::new(p(12.0, 14.0));
+    let (res, d) = qt.find(&cmp).unwrap();
+    assert_eq!(res, &data[5]);
+    assert_abs_diff_eq!(d, 2.0_f64.sqrt());
+
+    // Find_r only returns if closer than the passed radius, which will be
+    // None in this case
+    let res = qt.find_r(&cmp, 0.5);
+    assert_eq!(res, None);
+
+    // Knn/knn_r work the same way as find/find_r, but returns a vector of
+    // results
+    // TODO: Is there some way to work better with references here
+    let cmp = eucl(p(0.0, 0.0));
+    let res: Vec<MyDatum> = qt.knn(&cmp, 3).iter().map(|(d, _)| (*d).clone()).collect();
+    assert_eq!(res, vec![data[0].clone(), data[4].clone(), data[8].clone()]);
+
+    // Returns an empty vec if nothing is found in the radius
+    let cmp = eucl(p(14.0, 14.0));
+    let res = qt.knn_r(&cmp, 3, 0.5);
+    assert_eq!(res, vec![]);
+
     println!("{qt}");
 }
 
 #[test]
 fn spherical_point_example() {
-    
+    // TODO: Build out this example
 }
