@@ -210,7 +210,7 @@ fn knn_on_point_qt_returns_k_nodes_in_dist_order() {
     qt.insert(p3.clone()).unwrap();
 
     let cmp = Euclidean::new(Point::new(6.0, 5.0));
-    let res = qt.knn_r(&cmp, 3, f64::INFINITY);
+    let res = qt.knn_r(&cmp, 3, f64::INFINITY).unwrap();
 
     assert_eq!(res.len(), 3);
     assert_eq!(res[0].0.x_y(), p3.x_y());
@@ -237,7 +237,7 @@ fn knn_on_point_qt_stops_at_r() {
     qt.insert(p3.clone()).unwrap();
 
     let cmp = Euclidean::new(Point::new(6.0, 5.0));
-    let res = qt.knn_r(&cmp, 3, 4.0);
+    let res = qt.knn_r(&cmp, 3, 4.0).unwrap();
     
     assert_eq!(res.len(), 2);
     assert_eq!(res[0].0.x_y(), p3.x_y());

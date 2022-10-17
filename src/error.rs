@@ -3,4 +3,6 @@
 pub enum Error {
     OutOfBounds,
     CannotMakeBbox,
+    NoneInRadius,
+    Empty,
 }

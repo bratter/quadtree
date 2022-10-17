@@ -87,13 +87,21 @@ where
     D: Datum<T> + PointDatum<T>,
     T: GeoFloat,
 {
-    fn find_r<X>(&self, cmp: &X, r: T) -> Option<(&D, T)> 
+    fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error> 
     where
         X: Distance<T>
     {
+        // Error early if invalid
+        if cmp.dist_bbox(self.root.bounds()) != T::zero() {
+            return Err(Error::OutOfBounds);
+        }
+        if self.size == 0 {
+            return Err(Error::Empty);
+        }
+
         let mut stack = vec![&self.root];
         let mut min_dist = r;
-        let mut min_item: Option<&D> = None;
+        let mut min_item = Err(Error::NoneInRadius);
 
         while let Some(node) = stack.pop() {
             // First look at the current node and check if it should be
@@ -112,7 +120,7 @@ where
                 // as we only promise to return an arbitrary closest Datum
                 if child_dist <= min_dist {
                     min_dist = child_dist;
-                    min_item = Some(child);
+                    min_item = Ok(child);
                 }
             }
 
@@ -127,7 +135,7 @@ where
         min_item.map(|item| (item, min_dist))
     }
 
-    fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Vec<(&D, T)>
+    fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Result<Vec<(&D, T)>, Error>
     where
         X: Distance<T>
     {

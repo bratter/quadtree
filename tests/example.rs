@@ -129,20 +129,20 @@ fn euclidean_point_example() {
     assert_abs_diff_eq!(d, 2.0_f64.sqrt());
 
     // Find_r only returns if closer than the passed radius, which will be
-    // None in this case
+    // Err(Error::NoneInRadius) in this case
     let res = qt.find_r(&cmp, 0.5);
-    assert_eq!(res, None);
+    assert_eq!(res, Err(Error::NoneInRadius));
 
     // Knn/knn_r work the same way as find/find_r, but returns a vector of
     // results
     // TODO: Is there some way to work better with references here
     let cmp = eucl(p(0.0, 0.0));
-    let res: Vec<MyDatum> = qt.knn(&cmp, 3).iter().map(|(d, _)| (*d).clone()).collect();
+    let res: Vec<MyDatum> = qt.knn(&cmp, 3).unwrap().iter().map(|(d, _)| (*d).clone()).collect();
     assert_eq!(res, vec![data[0].clone(), data[4].clone(), data[8].clone()]);
 
     // Returns an empty vec if nothing is found in the radius
     let cmp = eucl(p(14.0, 14.0));
-    let res = qt.knn_r(&cmp, 3, 0.5);
+    let res = qt.knn_r(&cmp, 3, 0.5).unwrap();
     assert_eq!(res, vec![]);
 
     println!("{qt}");

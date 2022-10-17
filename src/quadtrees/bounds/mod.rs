@@ -93,13 +93,21 @@ where
     D: Datum<T>,
     T: GeoFloat,
 {
-    fn find_r<X>(&self, cmp: &X, r: T) -> Option<(&D, T)> 
+    fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error> 
     where
         X: Distance<T>
     {
+        // Error early if invalid
+        if cmp.dist_bbox(self.root.bounds()) != T::zero() {
+            return Err(Error::OutOfBounds);
+        }
+        if self.size == 0 {
+            return Err(Error::Empty);
+        }
+
         let mut stack = vec![&self.root];
         let mut min_dist = r;
-        let mut min_item: Option<&D> = None;
+        let mut min_item = Err(Error::NoneInRadius);
 
         while let Some(node) = stack.pop() {
             // No need to check the children if the bounds are too far,
@@ -112,16 +120,22 @@ where
             // Children will iterate through all children, stuck or otherwise
             for child in node.children() {
                 // Shortcut the potentially complex distance calc by using the
-                // bounds. This optimization may not always be faster in the
-                // bbox is difficult to calculate
-                let bbox = child.geometry().bounding_rect()?;
+                // bounds. This optimization may not always be faster, but if
+                // the bbox is expensive to calculate then the distance likely
+                // is also.
+                // TODO: Because this might fail, should we just pass through?
+                let bbox = child
+                    .geometry()
+                    .bounding_rect()
+                    .ok_or(Error::CannotMakeBbox)?;
+
                 if cmp.dist_bbox(&bbox) > min_dist { continue; }
 
                 let child_dist = cmp.dist_datum(child);
                 // See notes in point about <= usage
                 if child_dist <= min_dist {
                     min_dist = child_dist;
-                    min_item = Some(child);
+                    min_item = Ok(child);
                 }
             }
 
@@ -136,7 +150,7 @@ where
         min_item.map(|item| (item, min_dist))
     }
 
-    fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Vec<(&D, T)>
+    fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Result<Vec<(&D, T)>, Error>
     where
         X: Distance<T>
     {

@@ -30,19 +30,22 @@ where
     /// 
     /// This will often require an `impl Distance<T> for X` block, which will
     /// be trivial in most cases, as it can delegate to the underlying geometry.
+    /// 
+    /// A new note: This returns a `Result<(&D, T), Error>` rather than an
+    /// `Option` to give the consumer more insight into the failure reason.
     /// TODO: If this ends up returning an error instead, can make of the err enums a replacement for the unwrap here and in knn
-    fn find<X>(&self, cmp: &X) -> Option<(&D, T)>
+    fn find<X>(&self, cmp: &X) -> Result<(&D, T), Error>
     where
         X: Distance<T>,
     {
         self.find_r(cmp, T::from(f64::INFINITY).unwrap())
     }
 
-    fn find_r<X>(&self, cmp: &X, r: T) -> Option<(&D, T)>
+    fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error>
     where
         X: Distance<T>;
 
-    fn knn<X>(&self, cmp: &X, k: usize) -> Vec<(&D, T)>
+    fn knn<X>(&self, cmp: &X, k: usize) -> Result<Vec<(&D, T)>, Error>
     where
         X: Distance<T>,
     {
@@ -58,7 +61,7 @@ where
     /// Performs a partial unstable sort on nodes in any order, so (a) calls to
     /// distance that return `NaN` will panic, and (b) the method makes no
     /// ordering promise when data are at the same distance.
-    fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Vec<(&D, T)>
+    fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Result<Vec<(&D, T)>, Error>
     where
         X: Distance<T>;
 }

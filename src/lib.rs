@@ -3,10 +3,10 @@
  * 
  * Multiple quadtree implementations for various geometries.
  * 
- * TODO: Replace the Option return on find with Error, and an error enum: TestOutOfBounds, EmptyQuadTree, NoneInRadius - knn can return an out of bounds error also
+ * TODO: Add other failure conditions in find/knn e.g. at least haversine distance calc can fail, so dist_geom should be a result, and maybe other bbox functions also
  * TODO: Consumers need an easy time of sending radians into dist - perhaps just to_radians on Point is fine?
  * TODO: Distance sorted iterator
- * TODO: Retrieve as an iterator that doesn't error, just straight to non if out of bounds, or bbox fails
+ * TODO: Retrieve as an iterator that doesn't error, just straight to None if out of bounds, or bbox fails (start by converting get_all_children to an iterator)
  * TODO: Document or test that retrieve.filter can give intersections or contains; convert retrieve to an iterator?
  * TODO: Write documentation for everything
  * TODO: Add more Haversine implementations for Spherical math
