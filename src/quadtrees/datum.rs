@@ -2,12 +2,35 @@ use geo::{GeoNum, Coordinate, Point, Rect, Line, LineString, Polygon};
 
 use crate::Geometry;
 
-// TODO: Adjust this to talk about geometries, bounding rect, and comparisons
-/// A trait required for an item to be useable in a `BoundsQuadTree`. It simply
-/// requires that the item can produce a `geo::Rect` for comparisons.
+/// Trait to define a QuadTree Datum.
 /// 
-/// This trait comes implemented for all geo-types that implement
-/// `geo::BoundingRect`, so these types can be used in the quadtree directly.
+/// The trait enables polymorphic extraction of underlying geo-types to enable
+/// measurements for insertion and search operations. 
+/// 
+/// This trait must be implemented by any type that is inserted into a QuadTree.
+/// The library provides implementations for all geo-types that are supported.
+/// These supported Geometries are listed in the [`Geometry`] enum.
+/// 
+/// The only requirement for a valid QuadTree `Datum` is that it has a `geometry`
+/// method that returns one of the valid geo-type geometries. For custom `Datum`
+/// this will usually be a simple matter of return an already underlying geo-type
+/// and wrapping in the appropriate Geometry enum variant:
+/// 
+/// ```
+/// // For example for a Point wrapper using the default f64 numeric type
+/// # use geo::Point;
+/// # use quadtree::{Geometry, Datum};
+/// struct MyDatum {
+///     id: usize,
+///     location: Point,
+/// }
+/// 
+/// impl Datum for MyDatum {
+///     fn geometry(&self) -> Geometry<f64> {
+///         Geometry::Point(self.location)
+///     }
+/// }
+/// ```
 /// 
 /// We only constrain by GeoNum here as floats are not required if we are not
 /// using distance-based search methods.

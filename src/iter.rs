@@ -4,8 +4,11 @@ use geo::GeoNum;
 
 use super::*;
 
-// Preorder iterator implementation for a quadtree
-pub struct QuadTreeIter<'a, D, N, T>
+/// Preorder iterator intermediate type for a QuadTree. Iterates through the
+/// QuadTree in preorder, which in this context will drill depth first into
+/// each sub node starting with the lowest x/y combo, then proceeding
+/// counterclockwise as observed on a standard Euclidean plane.
+pub struct PreorderIter<'a, D, N, T>
 where
     N: Node<D, T>,
     T: GeoNum,
@@ -15,7 +18,7 @@ where
     _num_type: PhantomData<T>,
 }
 
-impl<'a, D, N, T> QuadTreeIter<'a, D, N, T>
+impl<'a, D, N, T> PreorderIter<'a, D, N, T>
 where
     N: Node<D, T>,
     T: GeoNum,
@@ -25,7 +28,7 @@ where
     }
 }
 
-impl<'a, D, N, T> Iterator for QuadTreeIter<'a, D, N, T>
+impl<'a, D, N, T> Iterator for PreorderIter<'a, D, N, T>
 where
     N: Node<D, T>,
     T: GeoNum,

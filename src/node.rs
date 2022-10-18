@@ -2,6 +2,7 @@ use geo::{Rect, Coordinate, coord, GeoNum};
 
 use crate::Error;
 
+/// Sub-node indicies.
 pub enum SubNode {
     TopLeft = 0,
     TopRight = 1,
@@ -9,6 +10,7 @@ pub enum SubNode {
     BottomLeft = 3,
 }
 
+/// Trait for a QuadTree node. This should not be visible to the consumer.
 pub trait Node<D, T>
 where
     Self: Sized,

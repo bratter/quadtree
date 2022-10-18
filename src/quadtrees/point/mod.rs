@@ -149,10 +149,10 @@ where
     T: GeoNum,
 {
     type Item = &'a D;
-    type IntoIter = QuadTreeIter<'a, D, PointNode<D, T>, T>;
+    type IntoIter = PreorderIter<'a, D, PointNode<D, T>, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        QuadTreeIter::new(&self.root)
+        PreorderIter::new(&self.root)
     }
 }
 

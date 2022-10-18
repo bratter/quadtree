@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
-
 use geo::GeoFloat;
 
 use crate::*;
 
+/// Internal knn enum to track whether an element is a child datum or a node.
 enum KnnType<'a, NodeType, D, T>
 where
     NodeType: Node<D, T>,
@@ -14,12 +14,12 @@ where
     _NumType(PhantomData<T>),
 }
 
-// Private, general, knn function implementation that takes an explcit node
-// This gets around forcing Node to be object safe and doing priv-in-pub to
-// get access to the root node, as root is just passed here.
-// QT implementations can simply delegate to this function.
-// Note that unlike find, knn will not return Err for empty trees as it is not
-// necessary (find would return an Err anyway).
+/// Private, general, knn function implementation that takes an explcit node
+/// This gets around forcing Node to be object safe and doing priv-in-pub to
+/// get access to the root node, as root is just passed here.
+/// QT implementations can simply delegate to this function.
+/// Note that unlike find, knn will not return Err for empty trees as it is not
+/// necessary (find would return an Err anyway).
 pub(crate) fn knn<'a, D, N, X, T>(root: &'a N, cmp: &X, k: usize, r: T) -> Result<Vec<(&'a D, T)>, Error>
 where
     N: Node<D, T>,
@@ -43,6 +43,7 @@ where
         // 1. Sort the stack in distance-descending order
         work_stack.sort_unstable_by(
             |(_, d1), (_, d2)|
+            // TODO: Replace this expect, or should knn error if any single partial_cmp fails?
             d2.partial_cmp(d1).expect("Distances contain no NaN values.")
         );
 
