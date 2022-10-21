@@ -1,34 +1,24 @@
 use std::marker::PhantomData;
+use std::slice::Iter;
+use std::iter::{Chain, empty};
 
 use geo::GeoNum;
 
 use super::*;
 
-/// Preorder iterator intermediate type for a QuadTree. Iterates through the
-/// QuadTree in preorder, which in this context will drill depth first into
-/// each sub node starting with the lowest x/y combo, then proceeding
-/// counterclockwise as observed on a standard Euclidean plane.
-pub struct PreorderIter<'a, D, N, T>
+pub enum DatumIter<'a, N, D, T>
 where
     N: Node<D, T>,
     T: GeoNum,
 {
-    stack: Vec<&'a N>,
-    children: Option<Vec<&'a D>>,
-    _num_type: PhantomData<T>,
+    Empty,
+    Slice(SliceIter<'a, D>),
+    ChainSlice(ChainSliceIter<'a, D>),
+    ChainSelf(ChainSelfIter<'a, N, D, T>),
+    Descendant(DescendantIter<'a, N, D, T>),
 }
 
-impl<'a, D, N, T> PreorderIter<'a, D, N, T>
-where
-    N: Node<D, T>,
-    T: GeoNum,
-{
-    pub fn new(root: &'a N) -> Self {
-        Self { stack: vec![root], children: None, _num_type: PhantomData }
-    }
-}
-
-impl<'a, D, N, T> Iterator for PreorderIter<'a, D, N, T>
+impl<'a, N, D, T> Iterator for DatumIter<'a, N, D, T>
 where
     N: Node<D, T>,
     T: GeoNum,
@@ -36,39 +26,139 @@ where
     type Item = &'a D;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // If we are currently working through children,
-        // keep going if there are still results left
-        if let Some(children) = &mut self.children {
-            if children.len() > 0 {
-                return children.pop();
-            }
+        match self {
+            Self::Empty => empty().next(),
+            Self::Slice(iter) => iter.next(),
+            Self::ChainSlice(iter) => iter.next(),
+            Self::ChainSelf(iter) => iter.next(),
+            Self::Descendant(iter) => iter.next(),
         }
-        
-        while !self.stack.is_empty() {
-            let cur_node = self.stack.pop()?;
-            
-            // When we have sub-nodes, push onto the stack in reverse order
-            if let Some(sub_nodes) = &cur_node.nodes() {
-                for i in 0..4 {
-                    self.stack.push(&sub_nodes[3 - i]);
-                }
-            }
-            
-            // Now grab the children and save them for iteration
-            // Have to do for all nodes, as children may not only be at leaves
-            let mut children = cur_node.children();
-            match children.len() {
-                0 => { continue; },
-                1 => { return children.pop(); },
-                _ => {
-                    let child = children.pop();
-                    self.children = Some(children);
-                    return child;
-                },
-            }
+    }
+}
+
+pub struct SliceIter<'a, D> {
+    iter: Iter<'a, D>,
+}
+
+impl<'a, D> SliceIter<'a, D> {
+    pub fn new(iter: Iter<'a, D>) -> Self {
+        Self { iter }
+    }
+}
+
+impl<'a, D> Iterator for SliceIter<'a, D> {
+    type Item = &'a D;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+pub struct ChainSliceIter<'a, D> {
+    iter: Chain<Iter<'a, D>, Iter<'a, D>>
+}
+
+impl<'a, D> ChainSliceIter<'a, D> {
+    pub fn new(iter: Chain<Iter<'a, D>, Iter<'a, D>>) -> Self {
+        Self { iter }
+    }
+}
+
+impl<'a, D> Iterator for ChainSliceIter<'a, D> {
+    type Item = &'a D;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+pub struct ChainSelfIter<'a, N, D, T>
+where
+    N: Node<D, T>,
+    T: GeoNum,
+{
+    iter: Chain<Box<DatumIter<'a, N, D, T>>, Box<DatumIter<'a, N, D, T>>>
+}
+
+impl<'a, N, D, T> ChainSelfIter<'a, N, D, T>
+where
+    N: Node<D, T>,
+    T: GeoNum,
+{
+    pub fn new(iter1: DatumIter<'a, N, D, T>, iter2: DatumIter<'a, N, D, T>) -> Self {
+        Self { iter: Box::new(iter1).chain(Box::new(iter2)) }
+    }
+}
+
+impl<'a, N, D, T> Iterator for ChainSelfIter<'a, N, D, T>
+where
+    N: Node<D, T>,
+    T: GeoNum,
+{
+    type Item = &'a D;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+pub struct DescendantIter<'a, N, D, T>
+where
+    N: Node<D, T>,
+    T: GeoNum,
+{
+    children_iter: Box<DatumIter<'a, N, D, T>>,
+    nodes: Iter<'a, N>,
+    cur_node_iter: Box<DatumIter<'a, N, D, T>>,
+    _nmum_type: PhantomData<T>,
+}
+
+impl<'a, N, D, T> DescendantIter<'a, N, D, T>
+where
+    N: Node<D, T>,
+    T: GeoNum,
+{
+    pub fn new(
+        children_iter: DatumIter<'a, N, D, T>,
+        mut nodes: Iter<'a, N>,
+    ) -> Self {
+        let children_iter = Box::new(children_iter);
+        // Unwrap will not panic because we know we always have four nodes
+        let cur_node_iter = Box::new(nodes.next().unwrap().descendants());
+        Self { children_iter, nodes, cur_node_iter, _nmum_type: PhantomData }
+    }
+}
+
+impl<'a, N, D, T> Iterator for DescendantIter<'a, N, D, T>
+where
+    N: Node<D, T>,
+    T: GeoNum,
+{
+    type Item = &'a D;
+
+    // This complex implementation is an adjustment for the lack of ability to
+    // return iterators simply. Would rather do:
+    // `children.chain(nodes.flat_map(|n| n.descendants()))` but can't return
+    // this due to inability to return impl Iterator from Traits.
+    fn next(&mut self) -> Option<Self::Item> {
+        // Return the item if we still have children
+        if let Some(child) = self.children_iter.next() {
+            return Some(child);
         }
 
-        // Finally return None if nothing left
+        // Now move on to iterating through descendant children
+        if let Some(child) = self.cur_node_iter.next() {
+            return Some(child);
+        }
+
+        // We have run out of current children and descendants, so move on to
+        // the next node, but must recurse so we return from next, otherwise
+        // we are all out
+        if let Some(node) = self.nodes.next() {
+            self.cur_node_iter = Box::new(node.descendants());
+            return self.next()
+        }
+        
         None
     }
 }

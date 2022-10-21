@@ -3,9 +3,9 @@ pub mod point;
 pub mod bounds;
 mod knn;
 
-use crate::{Distance, Error};
+use crate::{Distance, Error, node::Node, iter::DatumIter};
 pub use datum::Datum;
-use geo::GeoFloat;
+use geo::{GeoFloat, GeoNum};
 
 pub const DEFAULT_MAX_CHILDREN: usize = 4;
 pub const DEFAULT_MAX_DEPTH: u8 = 4;
@@ -17,7 +17,11 @@ pub const DEFAULT_MAX_DEPTH: u8 = 4;
 /// 
 /// Requires a single generic `D`, the types of the Datum that the QuadTree
 /// will hold.
-pub trait QuadTree<D> {
+pub trait QuadTree<N, D, T>
+where
+    N: Node<D, T>,
+    T: GeoNum,
+{
     /// Return the number of datums currently stored in the quadtree.
     fn size(&self) -> usize;
 
@@ -25,14 +29,14 @@ pub trait QuadTree<D> {
     /// if the insertion fails. Err will contain a Quadtree [`Error`].
     fn insert(&mut self, datum: D) -> Result<(), Error>;
 
-    /// Retrieve "nearby" datums to the passed datum.
+    /// Retrieve "nearby" datums to the passed datum in an iterator.
     /// 
-    /// this retrieval is useful for collision detection and other spatial
+    /// This retrieval is useful for collision detection and other spatial
     /// approximations, and works best when the quadtree is evenly populated.
     /// 
     // TODO: When this becomes an iterator, the iterator version should take a
-    //       different generic.
-    fn retrieve(&self, datum: &D) -> Vec<&D>;
+    //       different generic for D.
+    fn retrieve(&self, datum: &D) -> DatumIter<'_, N, D, T>;
 }
 
 /// Add on QuadTree trait that adds distance-based search methods to a

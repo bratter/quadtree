@@ -37,14 +37,14 @@ where
         }
     }
 
-    fn datum_position(datum: &D) -> Coordinate<T> {
+    fn datum_position(datum: &D) -> Option<Coordinate<T>> {
         // SAFETY: Unwrap here is Ok because bbox generation is required to
         // insert, and we ensure it returns before this is called on insertion
-        let bbox = datum.geometry().bounding_rect().unwrap();
+        let bbox = datum.geometry().bounding_rect()?;
         let (x, y) = bbox.min().x_y();
         let two = T::one() + T::one();
         
-        Coordinate { x: x + bbox.width() / two, y: y + bbox.height() / two }
+        Some(Coordinate { x: x + bbox.width() / two, y: y + bbox.height() / two })
     }
 
     // Getters
@@ -52,10 +52,15 @@ where
     fn depth(&self) -> u8 { self.depth }
     fn max_depth(&self) -> u8 { self.max_depth }
     fn max_children(&self) -> usize { self.max_children }
-    fn children(&self) -> Vec<&D> {
-        self.children.iter().chain(&self.stuck_children).collect()
-    }
     fn nodes(&self) -> &Option<Box<[Self; 4]>> { &self.nodes }
+
+    fn children(&self) -> DatumIter<Self, D, T> {
+        DatumIter::ChainSlice(
+            ChainSliceIter::new(
+                self.children.iter().chain(&self.stuck_children)
+            )
+        )
+    }
 
     // Setters
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
@@ -109,36 +114,42 @@ where
         Ok(())
     }
 
-    fn retrieve(&self, datum: &D) -> Vec<&D> {
-        let mut children = match &self.nodes {
-            // Where there are nodes, processes them
-            Some(nodes) => {
-                let sub_node = &nodes[self.find_sub_node(datum) as usize];
+    fn retrieve(&self, datum: &D) -> DatumIter<'_, BoundsNode<D, T>, D, T> {
+        // Get all the data from all nodes that intersect with the passed datum
+        let descendants = if let Some(nodes) = &self.nodes {
+            let sub_node = &nodes[self.find_sub_node(datum) as usize];
 
-                // TODO: See note in mod about what to do re. errors here
-                let bbox = datum.geometry().bounding_rect().unwrap();
-                if rect_in_rect(sub_node.bounds(), &bbox) {
-                    sub_node.retrieve(datum)
-                } else {
-                    let mut inner = vec![];
-                    // Return the entire contents of any overlapping node
-                    // Same semantics as https://github.com/mikechambers/ExamplesByMesh/blob/master/JavaScript/QuadTree/src/QuadTree.js
-                    for sub_node in &**nodes {
-                        if sub_node.bounds().intersects(&bbox) {
-                            inner.extend(get_all_children(sub_node));
+            // bounding_rect can fail, in which case here we retrieve nothing
+            match datum.geometry().bounding_rect() {
+                Some(bbox) => {
+                    if rect_in_rect(sub_node.bounds(), &bbox) {
+                        sub_node.retrieve(datum)
+                    } else {
+                        let mut inner = DatumIter::Empty;
+                        // Return the entire contents of any overlapping node
+                        // Same semantics as https://github.com/mikechambers/ExamplesByMesh/blob/master/JavaScript/QuadTree/src/QuadTree.js
+                        // TODO: Does geo::Intersects have the right semantics for border-cases?
+                        for sub_node in &**nodes {
+                            if sub_node.bounds().intersects(&bbox) {
+        
+                                inner = DatumIter::ChainSelf(
+                                    ChainSelfIter::new(inner, sub_node.descendants())
+                                );
+                            }
                         }
+                        inner
                     }
-                    inner
-                }
+                },
+                None => DatumIter::Empty,
             }
-            // Where there are no nodes, return the children
-            // There will be no children where there are child nodes
-            None => self.children.iter().collect()
+            
+        } else {
+            DatumIter::Empty
         };
 
-        // Always add the stuck children, this happens after the recursion
-        children.extend(&self.stuck_children);
-        children
+        // Start with the immediate children, which may include stuck children
+        // Then chain in descendants
+        DatumIter::ChainSelf(ChainSelfIter::new(self.children(), descendants))
     }
 }
 

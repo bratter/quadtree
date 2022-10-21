@@ -50,7 +50,7 @@ where
     }
 }
 
-impl<D, T> QuadTree<D> for PointQuadTree<D, T>
+impl<D, T> QuadTree<PointNode<D, T>, D, T> for PointQuadTree<D, T>
 where
     D: PointDatum<T>,
     T: GeoNum,
@@ -70,14 +70,15 @@ where
         }
     }
 
-    fn retrieve(&self, pt: &D) -> Vec<&D> {
+    // TODO: Temporary implementation to get the public interface working
+    fn retrieve(&self, pt: &D) -> DatumIter<'_, PointNode<D, T>, D, T> {
         // Bounds check first - capturing out of bounds here
         // This trusts the Node implementation to act correctly
         // Cannot use Rect::contains here, see notes on pt_in_rect for why
         if pt_in_rect(&self.root.bounds(), &pt.point()) {
             self.root.retrieve(pt)
         } else {
-            vec![]
+            DatumIter::Empty
         }
     }
 }
@@ -149,10 +150,10 @@ where
     T: GeoNum,
 {
     type Item = &'a D;
-    type IntoIter = PreorderIter<'a, D, PointNode<D, T>, T>;
+    type IntoIter = DatumIter<'a, PointNode<D, T>, D, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        PreorderIter::new(&self.root)
+        self.root.descendants()
     }
 }
 

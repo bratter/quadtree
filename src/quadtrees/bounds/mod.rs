@@ -49,7 +49,7 @@ where
     }
 }
 
-impl<D, T> QuadTree<D> for BoundsQuadTree<D, T>
+impl<D, T> QuadTree<BoundsNode<D, T>, D, T> for BoundsQuadTree<D, T>
 where
     D: Datum<T>,
     T: GeoNum,
@@ -76,14 +76,14 @@ where
         }
     }
 
-    fn retrieve(&self, datum: &D) -> Vec<&D> {
+    fn retrieve(&self, datum: &D) -> DatumIter<'_, BoundsNode<D, T>, D, T> {
         // TODO: Convert to ok_or when these can return errors... or maybe this should just return empty? 
         let bbox = datum.geometry().bounding_rect().unwrap();
         // Cannot use Rect::contains here, see notes on rect_in_rect for why
         if rect_in_rect(self.root.bounds(), &bbox) {
             self.root.retrieve(datum)
         } else {
-            vec![]
+            DatumIter::Empty
         }
     }
 }
@@ -164,10 +164,10 @@ where
     T: GeoNum,
 {
     type Item = &'a D;
-    type IntoIter = PreorderIter<'a, D, BoundsNode<D, T>, T>;
+    type IntoIter = DatumIter<'a, BoundsNode<D, T>, D, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        PreorderIter::new(&self.root)
+        self.root.descendants()
     }
 }
 
@@ -222,20 +222,20 @@ mod tests {
 
         // Dropping into an empty node returns only the one stuck on root
         let cmp = b(1.0, 5.0, 1.0, 1.0);
-        assert_eq!(qt.retrieve(&cmp), vec![&b4]);
+        assert_eq!(qt.retrieve(&cmp).collect::<Vec<_>>(), vec![&b4]);
 
         // Dropping into a node with a child returns both the child and the stuck ones above
-        // Stuck children happens after recursion, so will be at the end, inside out
+        // Stuck children happens before the recursion, so will be at the start
         let cmp = b(5.0, 5.0, 0.5, 0.5);
-        assert_eq!(qt.retrieve(&cmp), vec![&b6, &b4]);
+        assert_eq!(qt.retrieve(&cmp).collect::<Vec<_>>(), vec![&b4, &b6]);
 
         // Straddling two node returns from both and all stuck
         let cmp = b(5.0, 3.0, 2.0, 2.0);
-        assert_eq!(qt.retrieve(&cmp), vec![&b5, &b6, &b4]);
+        assert_eq!(qt.retrieve(&cmp).collect::<Vec<_>>(), vec![&b4, &b5, &b6]);
 
         // Straddling two nodes returns everything from all sub-nodes of both, and all stuck
         // This includes if the sub node is not directly covered
         let cmp = b(1.0, 1.0, 1.0, 2.0);
-        assert_eq!(qt.retrieve(&cmp), vec![&b1, &b1, &b2, &b3, &b4]);
+        assert_eq!(qt.retrieve(&cmp).collect::<Vec<_>>(), vec![&b4, &b3, &b1, &b1, &b2]);
     }
 }

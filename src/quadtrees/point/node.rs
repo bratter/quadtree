@@ -35,8 +35,8 @@ where
         }
     }
 
-    fn datum_position(datum: &D) -> Coordinate<T> {
-        datum.point().0
+    fn datum_position(datum: &D) -> Option<Coordinate<T>> {
+        Some(datum.point().0)
     }
 
     // Getters
@@ -44,8 +44,11 @@ where
     fn depth(&self) -> u8 { self.depth }
     fn max_depth(&self) -> u8 { self.max_depth }
     fn max_children(&self) -> usize { self.max_children }
-    fn children(&self) -> Vec<&D> { self.children.iter().collect() }
     fn nodes(&self) -> &Option<Box<[PointNode<D, T>; 4]>> { &self.nodes }
+
+    fn children(&self) -> DatumIter<Self, D, T> {
+        DatumIter::Slice(SliceIter::new(self.children.iter()))
+    }
 
     // Setters
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
@@ -89,14 +92,13 @@ where
     }
 
     // Pulls all children within the node that would contain the passed point
-    fn retrieve(&self, datum: &D) -> Vec<&D> {
+    fn retrieve(&self, datum: &D) -> DatumIter<'_, PointNode<D, T>, D, T> {
         match &self.nodes {
             Some(nodes) => {
                 nodes[self.find_sub_node(datum) as usize].retrieve(datum)
             },
             None => {
-                // Convert &Vec<T> to Vec<&T>
-                self.children.iter().collect()
+                self.children()
             }
         }
     }

@@ -1,6 +1,9 @@
+use std::marker::PhantomData;
+
 use geo::{Rect, Coordinate, coord, GeoNum};
 
 use crate::Error;
+use crate::iter::{DatumIter, DescendantIter};
 
 /// Sub-node indicies.
 pub enum SubNode {
@@ -8,6 +11,18 @@ pub enum SubNode {
     TopRight = 1,
     BottomRight = 2,
     BottomLeft = 3,
+}
+
+/// Internal enum to track whether an element in a Node iterator or stack is a
+/// child datum or a sub-node.
+pub enum NodeType<'a, N, D, T>
+where
+    N: Node<D, T>,
+    T: GeoNum,
+{
+    Node(&'a N),
+    Child(&'a D),
+    _NumType(PhantomData<T>),
 }
 
 /// Trait for a QuadTree node. This should not be visible to the consumer.
@@ -20,7 +35,7 @@ where
 
     /// Get a single Coordinate position of the datum in a manner suitable for
     /// the constraints of the implementation.
-    fn datum_position(datum: &D) -> Coordinate<T>;
+    fn datum_position(datum: &D) -> Option<Coordinate<T>>;
 
     fn bounds(&self) -> &Rect<T>;
 
@@ -30,22 +45,36 @@ where
 
     fn max_children(&self) -> usize;
 
-    /// Return a vector with references to all children of the current node.
+    fn nodes(&self) -> &Option<Box<[Self; 4]>>;
+    
+    /// Return an iterator with references to all children of the current node.
     /// This includes direct children and any stuck children if that concept
     /// exists for this QuadTree type. This means that any node, not just leaf
     /// nodes, may have children.
-    fn children(&self) -> Vec<&D>;
-
-    fn nodes(&self) -> &Option<Box<[Self; 4]>>;
+    fn children(&self) -> DatumIter<'_, Self, D, T>;
+    
+    /// Return all descendant data of this node in preorder. The iterator first
+    /// emits the children of the current node, then recurses into the
+    /// sub-nodes if they exist.
+    fn descendants(&self) -> DatumIter<'_, Self, D, T> {
+        if let Some(nodes) = self.nodes() {
+            DatumIter::Descendant(
+                DescendantIter::new(self.children(), nodes.iter())
+            )
+        } else {
+            self.children()
+        }
+    }
 
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>);
 
     fn insert(&mut self, datum: D) -> Result<(), Error>;
 
-    fn retrieve(&self, datum: &D) -> Vec<&D>;
+    fn retrieve(&self, datum: &D) -> DatumIter<'_, Self, D, T>;
 
+    // TODO: This should Option
     fn find_sub_node(&self, datum: &D) -> SubNode {
-        let (x, y) = Self::datum_position(datum).x_y();
+        let (x, y) = Self::datum_position(datum).unwrap().x_y();
         let two = T::one() + T::one();
         let left = x <= self.bounds().width() / two;
         let top = y <= self.bounds().height() / two;
@@ -85,7 +114,7 @@ where
     {
         let indent = " ".repeat(self.depth() as usize * 4);
         let min = self.bounds().min();
-        let count = self.children().len();
+        let count = self.children().count();
         let children = if count == 0 {
             "".to_owned()
         } else if count == 1 {
@@ -103,21 +132,4 @@ where
         };
         write!(f, "")
     }
-}
-
-// TODO: Better to implement as iter on Node?
-pub(crate) fn get_all_children<N, D, T>(node: &N) -> Vec<&D>
-where
-    N: Node<D, T>,
-    T: GeoNum,
-{
-    let mut children = node.children();
-
-    if let Some(nodes) = node.nodes() {
-        for sub_node in &**nodes {
-            children.extend(get_all_children(sub_node));
-        }
-    }
-
-    children
 }

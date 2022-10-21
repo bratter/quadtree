@@ -1,18 +1,6 @@
-use std::marker::PhantomData;
 use geo::GeoFloat;
 
 use crate::*;
-
-/// Internal knn enum to track whether an element is a child datum or a node.
-enum KnnType<'a, NodeType, D, T>
-where
-    NodeType: Node<D, T>,
-    T: GeoFloat,
-{
-    Node(&'a NodeType),
-    Child(&'a D),
-    _NumType(PhantomData<T>),
-}
 
 /// Private, general, knn function implementation that takes an explcit node
 /// This gets around forcing Node to be object safe and doing priv-in-pub to
@@ -35,7 +23,7 @@ where
     // We work on a tuple that contains the distance plus an enum
     // containing either a child or a node, and start by seeding the root
     let root_d = cmp.dist_bbox(root.bounds());
-    let mut work_stack = vec![(KnnType::Node(root), root_d)];
+    let mut work_stack = vec![(NodeType::Node(root), root_d)];
     let mut results = vec![];
 
     // Traverse the work stack in distance sorted order
@@ -50,7 +38,7 @@ where
         // 2. Process any Children at the top of the stack
         //    Done in an inner loop to prevent re-sorting if multiple
         //    children are on top
-        while let Some(&(KnnType::Child(child), d)) = work_stack.last() {
+        while let Some(&(NodeType::Child(child), d)) = work_stack.last() {
             // If the distance is > r, we are done completely
             if d > r { return Ok(results); }
 
@@ -64,18 +52,18 @@ where
 
         // 3. Push sub Nodes and Children onto the stack if inside the radius
         //    We know that the top of the stack is either None or Some(Node(...))
-        if let Some((KnnType::Node(node), d)) = work_stack.pop() {
+        if let Some((NodeType::Node(node), d)) = work_stack.pop() {
             if d > r { return Ok(results); }
 
             let children = node.children()
                 .into_iter()
-                .map(|child| (KnnType::Child(child), cmp.dist_geom(&child.geometry())));
+                .map(|child| (NodeType::Child(child), cmp.dist_geom(&child.geometry())));
             work_stack.extend(children);
 
             if let Some(nodes) = node.nodes() {
                 work_stack.extend(
                     nodes.iter().map(
-                        |node| (KnnType::Node(node), cmp.dist_bbox(node.bounds()))
+                        |node| (NodeType::Node(node), cmp.dist_bbox(node.bounds()))
                     )
                 );
             }

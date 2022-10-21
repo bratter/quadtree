@@ -84,9 +84,10 @@ fn euclidean_point_example() {
 
     // The standard iterator walks the quadtree in preorder, with each node
     // being walked counter-clockwise (on a Euclidean plane) from the lowest
-    // x/y values. Results with an individual nodes are non-deterministic.
+    // x/y values. Results with an individual nodes are non-deterministic
+    // and should be considered an implementation detail.
     let res: Vec<_> = qt.into_iter().collect();
-    let cmp = vec![&data[8], &data[4], &data[0], &data[2], &data[7], &data[3], &data[1], &data[6], &data[5]];
+    let cmp = vec![&data[0], &data[4], &data[8], &data[2], &data[7], &data[1], &data[3], &data[6], &data[5]];
     assert_eq!(res, cmp);
     
     // Up to this point, we have only needed PointDatum as insertion and

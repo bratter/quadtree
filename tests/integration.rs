@@ -11,7 +11,7 @@ fn create_empty_retrieve_inside_bounds_returns_empty_vec() {
     let pt1 = Point::new(0.1, 0.1);
 
     assert_eq!(qt.size(), 0);
-    assert_eq!(qt.retrieve(&pt1).len(), 0);
+    assert_eq!(qt.retrieve(&pt1).count(), 0);
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn create_and_retrieve_single_point_returns_vec_of_point() {
     qt.insert(pt1.clone()).unwrap();
 
     assert_eq!(qt.size(), 1);
-    assert_eq!(qt.retrieve(&pt1), vec![&pt1]);
+    assert_eq!(qt.retrieve(&pt1).collect::<Vec<_>>(), vec![&pt1]);
 }
 
 #[test]
@@ -40,7 +40,7 @@ fn insert_out_of_bounds_doesnt_add_and_retrieve_out_of_bounds_yields_error() {
 
     assert_eq!(res, Err(Error::OutOfBounds));
     assert_eq!(qt.size(), 1);
-    assert_eq!(qt.retrieve(&pt2).len(), 0);
+    assert_eq!(qt.retrieve(&pt2).count(), 0);
 }
 
 #[test]
