@@ -7,7 +7,7 @@ use geo::{Rect, BoundingRect, GeoFloat, GeoNum};
 use crate::*;
 pub use datum::*;
 use node::*;
-use super::knn::knn;
+use super::{knn::knn, sorted::{sorted, SortIter}};
 
 /// A quadtree implementation for bounded items (i.e. those with a finite width
 /// and/or height).
@@ -88,7 +88,7 @@ where
     }
 }
 
-impl<D, T> QuadTreeSearch<D, T> for BoundsQuadTree<D, T>
+impl<D, T> QuadTreeSearch<BoundsNode<D, T>, D, T> for BoundsQuadTree<D, T>
 where
     D: Datum<T>,
     T: GeoFloat,
@@ -155,6 +155,13 @@ where
         X: Distance<T>
     {
         knn(&self.root, cmp, k, r)
+    }
+
+    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, BoundsNode<D, T>, D, X, T>
+    where
+        X: Distance<T>,
+    {
+        sorted(&self.root, cmp)
     }
 }
 

@@ -7,6 +7,7 @@ pub use datum::*;
 use node::PointNode;
 use geom::Distance;
 use super::knn::knn;
+use super::sorted::{sorted, SortIter};
 
 /// A quadtree implementation for points.
 #[derive(Debug)]
@@ -83,7 +84,7 @@ where
     }
 }
 
-impl<D, T> QuadTreeSearch<D, T> for PointQuadTree<D, T>
+impl<D, T> QuadTreeSearch<PointNode<D, T>, D, T> for PointQuadTree<D, T>
 where
     D: Datum<T> + PointDatum<T>,
     T: GeoFloat,
@@ -141,6 +142,13 @@ where
         X: Distance<T>
     {
         knn(&self.root, cmp, k, r)
+    }
+
+    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, PointNode<D, T>, D, X, T>
+    where
+        X: Distance<T>,
+    {
+        sorted(&self.root, cmp)
     }
 }
 

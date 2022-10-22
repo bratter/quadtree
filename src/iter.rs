@@ -110,7 +110,7 @@ where
     children_iter: Box<DatumIter<'a, N, D, T>>,
     nodes: Iter<'a, N>,
     cur_node_iter: Box<DatumIter<'a, N, D, T>>,
-    _nmum_type: PhantomData<T>,
+    _num_type: PhantomData<T>,
 }
 
 impl<'a, N, D, T> DescendantIter<'a, N, D, T>
@@ -125,7 +125,7 @@ where
         let children_iter = Box::new(children_iter);
         // Unwrap will not panic because we know we always have four nodes
         let cur_node_iter = Box::new(nodes.next().unwrap().descendants());
-        Self { children_iter, nodes, cur_node_iter, _nmum_type: PhantomData }
+        Self { children_iter, nodes, cur_node_iter, _num_type: PhantomData }
     }
 }
 

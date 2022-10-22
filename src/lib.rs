@@ -4,13 +4,12 @@
  * Multiple quadtree implementations for various geometries.
  * 
  * TODO: Convert distance into a result, make missing haversine return a NotImplemented then add failure condition in find/knn
- * TODO: Distance sorted iterator
  * TODO: Write documentation for everything
- * TODO: Add more Haversine implementations for Spherical math
  * TODO: Add clear and remove operations to the quadtree trait
- * TODO: Force constraints on spherical coords?
+ * TODO: Add more Haversine implementations for Spherical math
  * TODO: Build an integer-with-power-2-bounds version?
  * TODO: Should nodes and children be private on the node structs?
+ * TODO: Force constraints on spherical coords?
  * TODO: Make a PR for the geo crate to add extra euclidean and haversine distance measures for Rect
  *       PR also should include fixing the TODO in https://docs.rs/geo/latest/src/geo/algorithm/contains/rect.rs.html#30-42
  *       This is wrong and should probably use > not >=

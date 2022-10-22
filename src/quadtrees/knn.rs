@@ -8,6 +8,9 @@ use crate::*;
 /// QT implementations can simply delegate to this function.
 /// Note that unlike find, knn will not return Err for empty trees as it is not
 /// necessary (find would return an Err anyway).
+/// 
+/// This could be implemented in terms of the `sorted` function with
+/// `take_while`, but here we have more aggressive error semantics.
 pub(crate) fn knn<'a, D, N, X, T>(root: &'a N, cmp: &X, k: usize, r: T) -> Result<Vec<(&'a D, T)>, Error>
 where
     N: Node<D, T>,
@@ -16,13 +19,13 @@ where
     T: GeoFloat,
 {
     // Error early on invalid inputs
-    if cmp.dist_bbox(root.bounds()) != T::zero() {
+    let root_d = cmp.dist_bbox(root.bounds());
+    if root_d != T::zero() {
         return Err(Error::OutOfBounds);
     }
 
     // We work on a tuple that contains the distance plus an enum
     // containing either a child or a node, and start by seeding the root
-    let root_d = cmp.dist_bbox(root.bounds());
     let mut work_stack = vec![(NodeType::Node(root), root_d)];
     let mut results = vec![];
 
@@ -31,8 +34,7 @@ where
         // 1. Sort the stack in distance-descending order
         work_stack.sort_unstable_by(
             |(_, d1), (_, d2)|
-            // TODO: Replace this expect, or should knn error if any single partial_cmp fails?
-            d2.partial_cmp(d1).expect("Distances contain no NaN values.")
+            d2.partial_cmp(d1).expect("Unreachable, NaN distances already removed.")
         );
 
         // 2. Process any Children at the top of the stack
@@ -55,17 +57,26 @@ where
         if let Some((NodeType::Node(node), d)) = work_stack.pop() {
             if d > r { return Ok(results); }
 
-            let children = node.children()
-                .into_iter()
-                .map(|child| (NodeType::Child(child), cmp.dist_geom(&child.geometry())));
-            work_stack.extend(children);
+            for child in node.children() {
+                let d = cmp.dist_geom(&child.geometry());
+
+                if !d.is_finite() {
+                    return Err(Error::InvalidDistance);
+                }
+
+                work_stack.push((NodeType::Child(child), d))
+            }
 
             if let Some(nodes) = node.nodes() {
-                work_stack.extend(
-                    nodes.iter().map(
-                        |node| (NodeType::Node(node), cmp.dist_bbox(node.bounds()))
-                    )
-                );
+                for sub_node in nodes.iter() {
+                    let d = cmp.dist_bbox(sub_node.bounds());
+
+                    if !d.is_finite() {
+                        return Err(Error::InvalidDistance);
+                    }
+
+                    work_stack.push((NodeType::Node(sub_node), d));
+                }
             }
         } else {
             // If we don't match here, then we are done with the loop

@@ -7,6 +7,7 @@ pub enum Error {
     CannotMakeBbox,
     CannotFindSubNode,
     NoneInRadius,
+    InvalidDistance,
     Empty,
     CannotCastInfinity,
 }

@@ -139,7 +139,7 @@ fn euclidean_point_example() {
     assert_eq!(res, Err(Error::NoneInRadius));
 
     // Knn/knn_r work the same way as find/find_r, but returns a vector of
-    // results
+    // results that is up to `k` in length
     // TODO: Is there some way to work better with references here
     let cmp = eucl(p(0.0, 0.0));
     let res: Vec<MyDatum> = qt.knn(&cmp, 3).unwrap().iter().map(|(d, _)| (*d).clone()).collect();
@@ -149,6 +149,14 @@ fn euclidean_point_example() {
     let cmp = eucl(p(14.0, 14.0));
     let res = qt.knn_r(&cmp, 3, 0.5).unwrap();
     assert_eq!(res, vec![]);
+
+    // Sorted produces a distance-sorted iterator over all the nodes. It also
+    // has more forgiving semantics than find/knn - it will skip errors rather
+    // than returning `Err`. Here we just sort everything from the farthest
+    // corner, and for ease, map the data to just the id
+    let cmp = eucl(p(32.0, 32.0));
+    let res = qt.sorted(&cmp).map(|d| d.0.id);
+    assert_eq!(res.collect::<Vec<_>>(), vec![5, 6, 7, 2, 3, 1, 8, 4, 0]);
 }
 
 #[test]

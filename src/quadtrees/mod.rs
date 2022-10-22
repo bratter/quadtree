@@ -2,10 +2,13 @@ pub mod datum;
 pub mod point;
 pub mod bounds;
 mod knn;
+mod sorted;
 
 use crate::{Distance, Error, node::Node, iter::DatumIter};
 pub use datum::Datum;
 use geo::{GeoFloat, GeoNum};
+
+use self::sorted::SortIter;
 
 pub const DEFAULT_MAX_CHILDREN: usize = 4;
 pub const DEFAULT_MAX_DEPTH: u8 = 4;
@@ -44,8 +47,10 @@ where
 /// 
 /// This trait constrains the available numeric type implementations to
 /// [`GeoFloat`] as floating point math is required to measure distances. 
-pub trait QuadTreeSearch<D, T>
+pub trait QuadTreeSearch<N, D, T>
 where
+    N: Node<D, T>,
+    D: Datum<T>,
     T: GeoFloat,
 {
     /// Find the closest datum in the quadtree to the passed comparator.
@@ -100,7 +105,7 @@ where
     /// Find `k` nearest neighbors of the comparator `cmp`.
     /// 
     /// The algorithm uses a partial unstable sort on nodes in any order, so
-    /// the method makes no ordering promise when data are a the same distance.
+    /// the method makes no ordering promise when data are at the same distance.
     /// 
     /// Returns a vector with a maximum length of k, but the result maybe
     /// shorter if insufficient points can be found. The vector's members
@@ -127,4 +132,24 @@ where
     fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Result<Vec<(&D, T)>, Error>
     where
         X: Distance<T>;
+
+    // TODO: Docs
+    /// Iterate through all data in the QuadTree in distance-sorted order.
+    /// 
+    /// The algorithm uses a partial unstable sort, so it makes no ordering
+    /// promise when data are at the same distance.
+    /// 
+    /// The iterator is designed to be more forgiving than [`QuadTreeSearch::find`]
+    /// and [`QuadTreeSearch::knn`], attempting to skip items on error rather
+    /// than returning an [`Err`].
+    /// 
+    /// As with the other search methods, the comparator must implement
+    /// [`Distance`], but this is usually provided by wrapping another type.
+    /// See [`QuadTreeSearch::find`] for more information. Similarly the
+    /// underlying type must implement [`Datum`], which comes for free with
+    /// any [`crate::Geometry`] type.
+    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, N, D, X, T>
+    where
+        X: Distance<T>,
+        N: Node<D, T>;
 }
