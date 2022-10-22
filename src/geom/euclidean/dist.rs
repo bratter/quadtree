@@ -5,6 +5,14 @@ use rstar::RTreeNum;
 use super::math::dist_rect_rect;
 use crate::Geometry;
 
+/// Trait applied to all valid geometries to calculate the Euclidean distance
+/// between geometries.
+/// 
+/// The trait is implemented for all [`Geometry`] geometries, and the enum
+/// itself.
+/// 
+/// This trait should not need to be used outside the crate as it is abstracted
+/// through the [`crate::Distance`] trait using the [`crate::Euclidean`] type.
 pub trait DistEuclidean<T, Rhs = Self> {
     fn dist_euclidean(&self, rhs: &Rhs) -> T;
 }
@@ -84,7 +92,6 @@ where
     }
 }
 
-// TODO: This can fail for spherical, so should probably return an error if it can't be done?
 impl<T> DistEuclidean<T, Geometry<T>> for Geometry<T>
 where
     T: GeoFloat + FloatConst + Signed + RTreeNum,

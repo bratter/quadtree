@@ -3,10 +3,15 @@ use geo::{GeoFloat, Line, LineString, Point, Polygon, Rect};
 
 use super::math::{dist_pt_line, dist_pt_pt, dist_pt_rect, dist_rect_rect};
 
-// TODO: Add more Haversine implementations, or make distance produce an error instead
-// TODO: Document this, note that we require all inputs in radians and produce all outputs in radians
-//       Mention this is different from the geo crate
-//       Provide examples and convenience methods for conversion
+/// Trait applied to all valida geometries to calculate the Haversine distance
+/// between geometries.
+/// 
+/// The trait is implemented for all [`Geometry`] geometries, and the enum
+/// itself, but may produce an error if the Haversine distance cannot be
+/// calculated.
+/// 
+/// This trait should not need to be used outside the crate as it is abstracted
+/// through the [`crate::Distance`] trait using the [`crate::Spherical`] type.
 pub trait DistHaversine<T, Rhs = Self> {
     fn dist_haversine(&self, rhs: &Rhs) -> Result<T, Error>;
 }

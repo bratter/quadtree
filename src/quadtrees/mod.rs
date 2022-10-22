@@ -41,7 +41,7 @@ where
     fn retrieve(&self, datum: &D) -> DatumIter<'_, Self::Node, D, T>;
 }
 
-/// Add on QuadTree trait that adds distance-based search methods to a
+/// Add-on QuadTree trait that adds distance-based search methods to a
 /// [`QuadTree`] implementation.
 ///
 /// This trait constrains the available numeric type implementations to

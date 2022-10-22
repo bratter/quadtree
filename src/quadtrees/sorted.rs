@@ -2,8 +2,10 @@ use geo::GeoFloat;
 
 use crate::*;
 
-// TODO: Docs
 /// Iterator to output QuadTree data in distance-sorted order.
+///
+/// Due to the additional requirement for supporting arbitrary test types, this
+/// is not unifed with [`DatumIter`].
 pub struct SortIter<'a, N, D, X, T>
 where
     N: Node<D, T>,

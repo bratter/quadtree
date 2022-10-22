@@ -1,6 +1,12 @@
 use geo::{BoundingRect, GeoNum, Line, LineString, Point, Polygon, Rect};
 
-/// Enum to capture the geo-types that can be used as Datums
+/// Enum to capture the geo-types that can be used as Datums.
+///
+/// We provide wrappers for [`Point`], [`Line`], [`LineString`], [`Polygon`],
+/// and [`Rect`].
+///
+/// [`From`] is implemented on Geometry for each of these geo-types to ease
+/// creation.
 #[derive(Debug, Clone)]
 pub enum Geometry<T>
 where

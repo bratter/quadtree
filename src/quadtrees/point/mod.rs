@@ -9,7 +9,16 @@ use geo::{GeoFloat, GeoNum, Rect};
 use geom::Distance;
 use node::PointNode;
 
-/// A quadtree implementation for points.
+/// A [`QuadTree`] implementation for point-like geometries.
+///
+/// This implementation requires the datum be a [`PointDatum`], which enables
+/// conversion of the datum to a [`geo::Point`]. [`PointDatum`] comes
+/// pre-implemented for [`geo::Point`] and [`geo::Coordinate`], but not for
+/// other geo-types, as there is no single way to convert non-point geometries
+/// to a point.
+///
+/// Users can implement [`PointDatum`] on any custom type they wish to use as
+/// a datum.
 #[derive(Debug)]
 pub struct PointQuadTree<D, T>
 where

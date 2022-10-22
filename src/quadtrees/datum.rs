@@ -2,7 +2,7 @@ use geo::{Coordinate, GeoNum, Line, LineString, Point, Polygon, Rect};
 
 use crate::Geometry;
 
-/// Trait to define a QuadTree Datum.
+/// Trait to define a [`crate::QuadTree`] Datum.
 ///
 /// The trait enables polymorphic extraction of underlying geo-types to enable
 /// measurements for insertion and search operations.

@@ -20,7 +20,11 @@ pub mod to_radians;
 /// Extracted as-is from geo-rust source
 pub const MEAN_EARTH_RADIUS: f64 = 6371008.8;
 
-/// Convenience function to wrap a `Test` item with a Spherical geometry wrapper.
+/// Convenience function to wrap a test item with a Spherical geometry wrapper.
+///
+/// Any test item `X` that implements [`Datum`] can be used in the wrapper, and
+/// the wrapper must be used to calculate Haversine distances in any of the
+/// [`crate::QuadTreeSearch`] methods.
 pub fn sphere<X, T>(test: X) -> Spherical<X, T>
 where
     X: Datum<T>,
@@ -30,6 +34,10 @@ where
 }
 
 /// Geometry wrapper type that implements Haversine distance formulas.
+///
+/// Any test item `X` that implements [`Datum`] can be used in the wrapper, and
+/// the wrapper must be used to calculate Haversine distances in any of the
+/// [`crate::QuadTreeSearch`] methods.
 #[derive(Debug)]
 pub struct Spherical<X, T>(X, PhantomData<T>)
 where

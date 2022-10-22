@@ -1,8 +1,10 @@
+use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
 use crate::*;
 use geo::{Coordinate, GeoNum, Rect};
 
+/// [`Node`] implementation for [`PointQuadTree`].
 #[derive(Debug)]
 pub struct PointNode<D, T>
 where
@@ -55,13 +57,13 @@ where
     fn max_children(&self) -> usize {
         self.max_children
     }
-    
+
     fn nodes(&self) -> &Option<Box<[PointNode<D, T>; 4]>> {
         &self.nodes
     }
 
     fn children(&self) -> DatumIter<Self, D, T> {
-        DatumIter::Slice(SliceIter::new(self.children.iter()))
+        DatumIter::Slice(self.children.iter())
     }
 
     // Setters
@@ -124,12 +126,12 @@ where
     }
 }
 
-impl<D, T> std::fmt::Display for PointNode<D, T>
+impl<D, T> Display for PointNode<D, T>
 where
     D: PointDatum<T>,
-    T: GeoNum + std::fmt::Display,
+    T: GeoNum + Display,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.display(f)
     }
 }

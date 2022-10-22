@@ -6,15 +6,17 @@ use geo::GeoNum;
 
 use super::*;
 
-// TODO: Docs
+/// Iterator type to unify iterators for Datum retrieval.
+///
+/// Is an enum that simply delegates all `next()` calls to the underlying type.
 pub enum DatumIter<'a, N, D, T>
 where
     N: Node<D, T>,
     T: GeoNum,
 {
     Empty,
-    Slice(SliceIter<'a, D>),
-    ChainSlice(ChainSliceIter<'a, D>),
+    Slice(Iter<'a, D>),
+    ChainSlice(Chain<Iter<'a, D>, Iter<'a, D>>),
     ChainSelf(ChainSelfIter<'a, N, D, T>),
     Descendant(DescendantIter<'a, N, D, T>),
 }
@@ -37,42 +39,9 @@ where
     }
 }
 
-pub struct SliceIter<'a, D> {
-    iter: Iter<'a, D>,
-}
-
-impl<'a, D> SliceIter<'a, D> {
-    pub fn new(iter: Iter<'a, D>) -> Self {
-        Self { iter }
-    }
-}
-
-impl<'a, D> Iterator for SliceIter<'a, D> {
-    type Item = &'a D;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
-    }
-}
-
-pub struct ChainSliceIter<'a, D> {
-    iter: Chain<Iter<'a, D>, Iter<'a, D>>,
-}
-
-impl<'a, D> ChainSliceIter<'a, D> {
-    pub fn new(iter: Chain<Iter<'a, D>, Iter<'a, D>>) -> Self {
-        Self { iter }
-    }
-}
-
-impl<'a, D> Iterator for ChainSliceIter<'a, D> {
-    type Item = &'a D;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
-    }
-}
-
+/// Convenience Iterator wrapper to chain two [`DatumIter`] instances.
+///
+/// Boxes the underlying iterators to priovide indirection.
 pub struct ChainSelfIter<'a, N, D, T>
 where
     N: Node<D, T>,
@@ -105,6 +74,9 @@ where
     }
 }
 
+/// Iterator that emits all children that are descendants of the current Node.
+/// This includes any "stuck children" if the concept exists for the given
+/// implementation, then all children of all sub-nodes, recursively.
 pub struct DescendantIter<'a, N, D, T>
 where
     N: Node<D, T>,

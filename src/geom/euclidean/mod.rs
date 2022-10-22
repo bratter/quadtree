@@ -8,10 +8,13 @@ use std::marker::PhantomData;
 
 mod dist;
 
-/// Module containing Euclidean coordinate math
 pub mod math;
 
-/// Convenience function to wrap a `Test` item with a Euclidean geometry wrapper.
+/// Convenience function to wrap a test item with a Euclidean geometry wrapper.
+///
+/// Any test item `X` that implements [`Datum`] can be used in the wrapper, and
+/// the wrapper must be used to calculate Euclidean distances in any of the
+/// [`crate::QuadTreeSearch`] methods.
 pub fn eucl<X, T>(test: X) -> Euclidean<X, T>
 where
     X: Datum<T>,
@@ -21,6 +24,10 @@ where
 }
 
 /// Geometry wrapper type that implements Euclidean distance formulas.
+///
+/// Any test item `X` that implements [`Datum`] can be used in the wrapper, and
+/// the wrapper must be used to calculate Euclidean distances in any of the
+/// [`crate::QuadTreeSearch`] methods.
 #[derive(Debug)]
 pub struct Euclidean<X, T>(X, PhantomData<T>)
 where

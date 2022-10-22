@@ -18,6 +18,7 @@ macro_rules! l {
     };
 }
 
+/// Internal struct for ensuring Lng wrapping math works correctly.
 #[derive(Debug, Clone, Copy)]
 struct Lng<T>(T)
 where
@@ -77,6 +78,11 @@ where
     }
 }
 
+/// Calculate the great circle distance between two [`Point`]'s using the
+/// Haversine formula.
+/// 
+/// Inputs and outputs are in radians. Convert radians to a linear distance by
+/// multiplying by the sphere's radius.
 pub fn dist_pt_pt<T>(p1: &Point<T>, p2: &Point<T>) -> T
 where
     T: GeoFloat,
@@ -92,17 +98,13 @@ where
     two * a.sqrt().asin()
 }
 
-// TODO: Update doc comments
-/// Calculate the great circle distance between a point `p` and a line segment
-/// defined by its two endpoints `p1` and `p2`. Inputs and outputs are in
-/// radians. Convert radians to any distance unit by multiplying by the radius.
-///
-/// Inputs must be provided as `(lng, lat)` radian tuples.
-///
-/// Squared versions are not required as there is no final `.sqrt()` in the
-/// haversine formula.
-///
-/// Adapted from: https://github.com/Turfjs/turf/blob/master/packages/turf-point-to-line-distance/index.ts
+/// Calculate the great circle distance between a [`Point`] and a [`Line`]
+/// using the Haversine formula.
+/// 
+/// Inputs and outputs are in radians. Convert radians to a linear distance by
+/// multiplying by the sphere's radius.
+/// 
+/// Adapted from [TurfJS](https://github.com/Turfjs/turf/blob/master/packages/turf-point-to-line-distance/index.ts).
 pub fn dist_pt_line<T>(pt: &Point<T>, line: &Line<T>) -> T
 where
     T: GeoFloat,
@@ -139,6 +141,11 @@ where
     }
 }
 
+/// Calculate the great circle distance between a [`Point`] and a [`Rect`]
+/// using the Haversine formula.
+/// 
+/// Inputs and outputs are in radians. Convert radians to a linear distance by
+/// multiplying by the sphere's radius.
 pub fn dist_pt_rect<T>(pt: &Point<T>, rect: &Rect<T>) -> T
 where
     T: GeoFloat,
@@ -177,6 +184,17 @@ where
 // https://macwright.com/2016/09/26/the-180th-meridian.html. All calcs
 // in this module assume that no shape can cross 180 deg lng. Everything
 // must be a separate shape in a composite.
+
+/// Calculate the great circle distance between two [`Rect`]'s using the
+/// Haversine formula.
+/// 
+/// Inputs and outputs are in radians. Convert radians to a linear distance by
+/// multiplying by the sphere's radius.
+/// 
+/// Note that the antimeridian is a problem that is not easy to solve, see:
+/// https://macwright.com/2016/09/26/the-180th-meridian.html. All calcs
+/// in this module assume that no shape can cross 180 deg lng. Everything
+/// must be a separate shape in a composite.
 pub fn dist_rect_rect<T>(r1: &Rect<T>, r2: &Rect<T>) -> T
 where
     T: GeoFloat,

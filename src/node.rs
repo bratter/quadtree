@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
 use geo::{coord, Coordinate, GeoNum, Rect};
@@ -6,6 +7,9 @@ use crate::iter::{DatumIter, DescendantIter};
 use crate::Error;
 
 /// Sub-node indicies.
+///
+/// Naming scheme based on clockwise rotation with a top-left origin. Or
+/// counterclockeise with a bottom-left origin.
 #[derive(Debug, Clone, Copy)]
 pub enum SubNode {
     TopLeft = 0,
@@ -27,26 +31,35 @@ where
     _NumType(PhantomData<T>),
 }
 
-/// Trait for a QuadTree node. This should not be visible to the consumer.
+/// Trait for a QuadTree node. Nodes should not be visible to the consumer.
 pub trait Node<D, T>
 where
     Self: Sized,
     T: GeoNum,
 {
+    /// Create a new Node with the passed structure.
     fn new(bounds: Rect<T>, depth: u8, max_depth: u8, max_children: usize) -> Self;
 
-    /// Get a single Coordinate position of the datum in a manner suitable for
-    /// the constraints of the implementation.
+    /// Get a single [`Coordinate`] position of the datum in a manner suitable
+    /// for the constraints of the implementation.
     fn datum_position(datum: &D) -> Option<Coordinate<T>>;
 
+    /// Get the bounding rect for the Node.
     fn bounds(&self) -> &Rect<T>;
 
+    /// Get the depth of the current Node in the QuadTree.
     fn depth(&self) -> u8;
 
+    /// Get the maximum depth permitted in the QuadTree.
     fn max_depth(&self) -> u8;
 
+    /// Get the maxmimum number of children allowed per node before subdividing.
+    /// Note that max depth has precedence, so children may stack arbitrarily at
+    /// the deepest level.
     fn max_children(&self) -> usize;
 
+    /// Returns the Node's sub-nodes. Is an Option because these won;t exist
+    /// for leaf Nodes.
     fn nodes(&self) -> &Option<Box<[Self; 4]>>;
 
     /// Return an iterator with references to all children of the current node.
@@ -66,12 +79,20 @@ where
         }
     }
 
+    /// Set the sub-nodes for this Node. Required as a separate method to
+    /// enable the sub-node logic to live in the trait.
     fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>);
 
+    /// Insert a child into this Node, or delegate to a sub-node where
+    /// appropriate.
     fn insert(&mut self, datum: D) -> Result<(), Error>;
 
+    /// Retrieve from this Node. Will return children and also delegate to the
+    /// appropriate sub-nodes based on the implementation.
     fn retrieve(&self, datum: &D) -> DatumIter<'_, Self, D, T>;
 
+    /// Find the index of the appropriate sub-node to delegate an insert or
+    /// retrieve operation if required.
     fn find_sub_node(&self, datum: &D) -> Option<SubNode> {
         let (x, y) = Self::datum_position(datum)?.x_y();
         let two = T::one() + T::one();
@@ -91,6 +112,8 @@ where
         Some(sn)
     }
 
+    /// Subdivide the current Node into four sub-nodes at the next-depth level
+    /// and set them in the current Node.
     fn subdivide(&mut self) {
         let bounds = self.bounds();
         let depth = self.depth() + 1;
@@ -134,9 +157,10 @@ where
         ])));
     }
 
-    fn display(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
+    /// Heavy-lifting for custom Node display.
+    fn display(&self, f: &mut Formatter) -> std::fmt::Result
     where
-        T: std::fmt::Display,
+        T: Display,
     {
         let indent = " ".repeat(self.depth() as usize * 4);
         let min = self.bounds().min();

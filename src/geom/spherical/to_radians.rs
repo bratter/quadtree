@@ -4,12 +4,36 @@ use geo::{
 
 use crate::Geometry;
 
+/// Ergonomic trait to enable easy conversion of valid geo-types from degrees
+/// to radians.
+///
+/// The trait is implemented for all types in [`Geometry`] and the enum itself.
+///
+/// This is useful because most input sources will contain Lng/Lat coordinates
+/// in degrees, but all quadtree crate spherical geometry methods accept and
+/// return radians only.
+///
+/// Note: Radians was a design choice to make it easy to use Spherical distances
+/// on any spherical body, as opposed to an approach that multiplies by Earth's
+/// radius before returning.
 pub trait ToRadians<T>
 where
     T: GeoFloat,
 {
+    /// Convert all coordinates in a geometry from degrees to radians. This
+    /// method maps over all the underlying coordinates and returns a new
+    /// geometry.
+    ///
+    /// Note that all [`QuadTree`] distance methods require input geometries to
+    /// be in radians.
     fn to_radians(&self) -> Self;
 
+    /// Convert all coordinates in a geometry from degrees to radians. This
+    /// method maps over all coordinates *in place*, modifying the underlying
+    /// geometry.
+    ///
+    /// Note that all [`QuadTree`] distance methods require input geometries to
+    /// be in radians.
     fn to_radians_in_place(&mut self);
 }
 

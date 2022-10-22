@@ -11,8 +11,16 @@ use crate::*;
 pub use datum::*;
 use node::*;
 
-/// A quadtree implementation for bounded items (i.e. those with a finite width
-/// and/or height).
+/// A [`QuadTree`] implementation for bounded items (i.e. those with a finite
+/// width and/or height).
+/// 
+/// This implementation requires the datum to simply be a [`Datum`], which
+/// enables the conversion of the datum to a [`Geometry`] - an enum that wraps
+/// valid underlying geo-types. Datum comes pre-implemented for all valid
+/// geo-types.
+/// 
+/// Users can implement [`PointDatum`] on any custom type they wish to use as
+/// a datum. See more detailed instructions in the [`PointDatum`] docs.
 #[derive(Debug)]
 pub struct BoundsQuadTree<D, T>
 where

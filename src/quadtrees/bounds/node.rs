@@ -1,8 +1,10 @@
+use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
 use crate::*;
 use geo::{BoundingRect, Coordinate, GeoNum, Intersects, Rect};
 
+/// [`Node`] implementation for [`BoundsQuadTree`].
 #[derive(Debug)]
 pub struct BoundsNode<D, T>
 where
@@ -64,15 +66,13 @@ where
     fn max_children(&self) -> usize {
         self.max_children
     }
-    
+
     fn nodes(&self) -> &Option<Box<[Self; 4]>> {
         &self.nodes
     }
 
     fn children(&self) -> DatumIter<Self, D, T> {
-        DatumIter::ChainSlice(ChainSliceIter::new(
-            self.children.iter().chain(&self.stuck_children),
-        ))
+        DatumIter::ChainSlice(self.children.iter().chain(&self.stuck_children))
     }
 
     // Setters
@@ -164,12 +164,12 @@ where
     }
 }
 
-impl<D, T> std::fmt::Display for BoundsNode<D, T>
+impl<D, T> Display for BoundsNode<D, T>
 where
     D: Datum<T>,
-    T: GeoNum + std::fmt::Display,
+    T: GeoNum + Display,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.display(f)
     }
 }
