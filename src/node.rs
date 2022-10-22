@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
-use geo::{Rect, Coordinate, coord, GeoNum};
+use geo::{coord, Coordinate, GeoNum, Rect};
 
-use crate::Error;
 use crate::iter::{DatumIter, DescendantIter};
+use crate::Error;
 
 /// Sub-node indicies.
 #[derive(Debug, Clone, Copy)]
@@ -48,21 +48,19 @@ where
     fn max_children(&self) -> usize;
 
     fn nodes(&self) -> &Option<Box<[Self; 4]>>;
-    
+
     /// Return an iterator with references to all children of the current node.
     /// This includes direct children and any stuck children if that concept
     /// exists for this QuadTree type. This means that any node, not just leaf
     /// nodes, may have children.
     fn children(&self) -> DatumIter<'_, Self, D, T>;
-    
+
     /// Return all descendant data of this node in preorder. The iterator first
     /// emits the children of the current node, then recurses into the
     /// sub-nodes if they exist.
     fn descendants(&self) -> DatumIter<'_, Self, D, T> {
         if let Some(nodes) = self.nodes() {
-            DatumIter::Descendant(
-                DescendantIter::new(self.children(), nodes.iter())
-            )
+            DatumIter::Descendant(DescendantIter::new(self.children(), nodes.iter()))
         } else {
             self.children()
         }
@@ -80,10 +78,15 @@ where
         let left = x <= self.bounds().width() / two;
         let top = y <= self.bounds().height() / two;
 
-        let sn = if left && top { SubNode::TopLeft }
-            else if !left && top { SubNode::TopRight }
-            else if left && !top { SubNode::BottomLeft }
-            else { SubNode::BottomRight };
+        let sn = if left && top {
+            SubNode::TopLeft
+        } else if !left && top {
+            SubNode::TopRight
+        } else if left && !top {
+            SubNode::BottomLeft
+        } else {
+            SubNode::BottomRight
+        };
 
         Some(sn)
     }
@@ -93,21 +96,41 @@ where
         let depth = self.depth() + 1;
         let md = self.max_depth();
         let mc = self.max_children();
-        
+
         let two = T::one() + T::one();
         let wh = bounds.width() / two;
         let hh = bounds.height() / two;
-        
+
         let (x1, y1) = bounds.min().x_y();
         let (x2, y2) = (x1 + wh, y1 + hh);
         let (x3, y3) = bounds.max().x_y();
 
         // Fixed order of iteration tl, tr, br, bl
         self.set_nodes(Some(Box::new([
-            Self::new(Rect::new(coord! {x: x1, y: y1}, coord! {x: x2, y: y2}), depth, md, mc),
-            Self::new(Rect::new(coord! {x: x2, y: y1}, coord! {x: x3, y: y2}), depth, md, mc),
-            Self::new(Rect::new(coord! {x: x2, y: y2}, coord! {x: x3, y: y3}), depth, md, mc),
-            Self::new(Rect::new(coord! {x: x1, y: y2}, coord! {x: x2, y: y3}), depth, md, mc),
+            Self::new(
+                Rect::new(coord! {x: x1, y: y1}, coord! {x: x2, y: y2}),
+                depth,
+                md,
+                mc,
+            ),
+            Self::new(
+                Rect::new(coord! {x: x2, y: y1}, coord! {x: x3, y: y2}),
+                depth,
+                md,
+                mc,
+            ),
+            Self::new(
+                Rect::new(coord! {x: x2, y: y2}, coord! {x: x3, y: y3}),
+                depth,
+                md,
+                mc,
+            ),
+            Self::new(
+                Rect::new(coord! {x: x1, y: y2}, coord! {x: x2, y: y3}),
+                depth,
+                md,
+                mc,
+            ),
         ])));
     }
 

@@ -52,15 +52,19 @@ where
     fn bounds(&self) -> &Rect<T> {
         &self.bounds
     }
+
     fn depth(&self) -> u8 {
         self.depth
     }
+
     fn max_depth(&self) -> u8 {
         self.max_depth
     }
+
     fn max_children(&self) -> usize {
         self.max_children
     }
+    
     fn nodes(&self) -> &Option<Box<[Self; 4]>> {
         &self.nodes
     }
@@ -130,7 +134,8 @@ where
         // Descendants overall will produce an iterator of children in all nodes
         // that intersect with the passed node
         let descendants = if let Some(((nodes, sn_index), bbox)) = self
-            .nodes.as_ref()
+            .nodes
+            .as_ref()
             .zip(self.find_sub_node(datum))
             .zip(datum.geometry().bounding_rect())
         {
@@ -143,10 +148,8 @@ where
                 // Same semantics as https://github.com/mikechambers/ExamplesByMesh/blob/master/JavaScript/QuadTree/src/QuadTree.js
                 for sub_node in &**nodes {
                     if sub_node.bounds().intersects(&bbox) {
-                        inner = DatumIter::ChainSelf(ChainSelfIter::new(
-                            inner,
-                            sub_node.descendants(),
-                        ));
+                        inner =
+                            DatumIter::ChainSelf(ChainSelfIter::new(inner, sub_node.descendants()));
                     }
                 }
                 inner

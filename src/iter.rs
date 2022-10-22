@@ -1,6 +1,6 @@
+use std::iter::{empty, Chain};
 use std::marker::PhantomData;
 use std::slice::Iter;
-use std::iter::{Chain, empty};
 
 use geo::GeoNum;
 
@@ -56,7 +56,7 @@ impl<'a, D> Iterator for SliceIter<'a, D> {
 }
 
 pub struct ChainSliceIter<'a, D> {
-    iter: Chain<Iter<'a, D>, Iter<'a, D>>
+    iter: Chain<Iter<'a, D>, Iter<'a, D>>,
 }
 
 impl<'a, D> ChainSliceIter<'a, D> {
@@ -78,7 +78,7 @@ where
     N: Node<D, T>,
     T: GeoNum,
 {
-    iter: Chain<Box<DatumIter<'a, N, D, T>>, Box<DatumIter<'a, N, D, T>>>
+    iter: Chain<Box<DatumIter<'a, N, D, T>>, Box<DatumIter<'a, N, D, T>>>,
 }
 
 impl<'a, N, D, T> ChainSelfIter<'a, N, D, T>
@@ -87,7 +87,9 @@ where
     T: GeoNum,
 {
     pub fn new(iter1: DatumIter<'a, N, D, T>, iter2: DatumIter<'a, N, D, T>) -> Self {
-        Self { iter: Box::new(iter1).chain(Box::new(iter2)) }
+        Self {
+            iter: Box::new(iter1).chain(Box::new(iter2)),
+        }
     }
 }
 
@@ -119,14 +121,16 @@ where
     N: Node<D, T>,
     T: GeoNum,
 {
-    pub fn new(
-        children_iter: DatumIter<'a, N, D, T>,
-        mut nodes: Iter<'a, N>,
-    ) -> Self {
+    pub fn new(children_iter: DatumIter<'a, N, D, T>, mut nodes: Iter<'a, N>) -> Self {
         let children_iter = Box::new(children_iter);
         // Unwrap will not panic because we know we always have four nodes
         let cur_node_iter = Box::new(nodes.next().unwrap().descendants());
-        Self { children_iter, nodes, cur_node_iter, _num_type: PhantomData }
+        Self {
+            children_iter,
+            nodes,
+            cur_node_iter,
+            _num_type: PhantomData,
+        }
     }
 }
 
@@ -157,9 +161,9 @@ where
         // we are all out
         if let Some(node) = self.nodes.next() {
             self.cur_node_iter = Box::new(node.descendants());
-            return self.next()
+            return self.next();
         }
-        
+
         None
     }
 }

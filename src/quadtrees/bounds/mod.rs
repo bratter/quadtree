@@ -1,13 +1,15 @@
-mod datum;
 mod node;
 
+use geo::{BoundingRect, GeoFloat, GeoNum, Rect};
 use std::vec;
-use geo::{Rect, BoundingRect, GeoFloat, GeoNum};
 
+use super::{
+    knn::knn,
+    sorted::{sorted, SortIter},
+};
 use crate::*;
 pub use datum::*;
 use node::*;
-use super::{knn::knn, sorted::{sorted, SortIter}};
 
 /// A quadtree implementation for bounded items (i.e. those with a finite width
 /// and/or height).
@@ -38,7 +40,7 @@ where
     }
 
     // Private constructor
-    fn private_new(bounds: Rect<T>, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
+    fn private_new(bounds: Rect<T>, max_depth: Option<u8>, max_children: Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
         let max_children = max_children.unwrap_or(DEFAULT_MAX_CHILDREN);
 
@@ -100,9 +102,9 @@ where
 {
     type Node = BoundsNode<D, T>;
 
-    fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error> 
+    fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error>
     where
-        X: Distance<T>
+        X: Distance<T>,
     {
         // Error early if invalid
         if cmp.dist_bbox(self.root.bounds())? != T::zero() {
@@ -120,7 +122,9 @@ where
             // No need to check the children if the bounds are too far,
             // checking bounds is cheaper then checking each child
             let bounds_dist = cmp.dist_bbox(node.bounds())?;
-            if bounds_dist >= min_dist { continue; }
+            if bounds_dist >= min_dist {
+                continue;
+            }
 
             // Loop through all the children of the current node, retaining
             // only the currently closest child, stuck or otherwise
@@ -135,7 +139,9 @@ where
                     .bounding_rect()
                     .ok_or(Error::CannotMakeBbox)?;
 
-                if cmp.dist_bbox(&bbox)? > min_dist { continue; }
+                if cmp.dist_bbox(&bbox)? > min_dist {
+                    continue;
+                }
 
                 let child_dist = cmp.dist_geom(&child.geometry())?;
                 // See notes in point about <= usage
@@ -158,7 +164,7 @@ where
 
     fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Result<Vec<(&D, T)>, Error>
     where
-        X: Distance<T>
+        X: Distance<T>,
     {
         knn(&self.root, cmp, k, r)
     }
@@ -197,8 +203,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use geo::{Point, Rect, coord};
     use super::*;
+    use geo::{coord, Point, Rect};
 
     // helper function for bounds datum creation
     fn b(x: f64, y: f64, w: f64, h: f64) -> Rect {
@@ -249,6 +255,9 @@ mod tests {
         // Straddling two nodes returns everything from all sub-nodes of both, and all stuck
         // This includes if the sub node is not directly covered
         let cmp = b(1.0, 1.0, 1.0, 2.0);
-        assert_eq!(qt.retrieve(&cmp).collect::<Vec<_>>(), vec![&b4, &b3, &b1, &b1, &b2]);
+        assert_eq!(
+            qt.retrieve(&cmp).collect::<Vec<_>>(),
+            vec![&b4, &b3, &b1, &b1, &b2]
+        );
     }
 }

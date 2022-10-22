@@ -1,9 +1,9 @@
+use crate::{Datum, Distance, Error, Geometry};
 use core::ops::Deref;
-use std::marker::PhantomData;
-use geo::{Rect, GeoNum, GeoFloat};
-use num_traits::FromPrimitive;
-use crate::{Distance, Datum, Geometry, Error};
 pub use dist::DistHaversine;
+use geo::{GeoFloat, GeoNum, Rect};
+use num_traits::FromPrimitive;
+use std::marker::PhantomData;
 
 mod dist;
 
@@ -31,7 +31,7 @@ where
 
 /// Geometry wrapper type that implements Haversine distance formulas.
 #[derive(Debug)]
-pub struct Spherical<X, T> (X, PhantomData<T>)
+pub struct Spherical<X, T>(X, PhantomData<T>)
 where
     X: Datum<T>,
     T: GeoNum;

@@ -2,7 +2,7 @@
 // on the various quadtree implementations
 
 use approx::assert_abs_diff_eq;
-use geo::{Rect, Point, coord};
+use geo::{coord, Point, Rect};
 use quadtree::*;
 
 // Some helper functions to make geo shapes
@@ -35,7 +35,11 @@ fn euclidean_point_example() {
 
     // Just a simple helper function to make it easier to construct MyDatum
     fn datum(id: usize, x: f64, y: f64) -> MyDatum {
-        MyDatum { id, meta: (), location: p(x, y) }
+        MyDatum {
+            id,
+            meta: (),
+            location: p(x, y),
+        }
     }
 
     // Construct a point qt in some bounds
@@ -81,7 +85,8 @@ fn euclidean_point_example() {
 
     // Can filter/map etc. using the iterator to, for example, filter by some metadata
     // Here we grab from a populated node, filter some points out and grab the id only
-    let res = qt.retrieve(&datum(42, 0.5, 0.5))
+    let res = qt
+        .retrieve(&datum(42, 0.5, 0.5))
         .filter(|d| d.id >= 2)
         .map(|d| d.id);
     assert_eq!(res.collect::<Vec<_>>(), vec![4, 8]);
@@ -91,9 +96,11 @@ fn euclidean_point_example() {
     // x/y values. Results with an individual nodes are non-deterministic
     // and should be considered an implementation detail.
     let res: Vec<_> = qt.into_iter().collect();
-    let cmp = vec![&data[0], &data[4], &data[8], &data[2], &data[7], &data[1], &data[3], &data[6], &data[5]];
+    let cmp = vec![
+        &data[0], &data[4], &data[8], &data[2], &data[7], &data[1], &data[3], &data[6], &data[5],
+    ];
     assert_eq!(res, cmp);
-    
+
     // Up to this point, we have only needed PointDatum as insertion and
     // retrieval don't require access to the entire geometry, but now we do
     // to use find and knn.
@@ -142,7 +149,12 @@ fn euclidean_point_example() {
     // results that is up to `k` in length
     // TODO: Is there some way to work better with references here
     let cmp = eucl(p(0.0, 0.0));
-    let res: Vec<MyDatum> = qt.knn(&cmp, 3).unwrap().iter().map(|(d, _)| (*d).clone()).collect();
+    let res: Vec<MyDatum> = qt
+        .knn(&cmp, 3)
+        .unwrap()
+        .iter()
+        .map(|(d, _)| (*d).clone())
+        .collect();
     assert_eq!(res, vec![data[0].clone(), data[4].clone(), data[8].clone()]);
 
     // Returns an empty vec if nothing is found in the radius

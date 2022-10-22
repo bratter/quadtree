@@ -1,13 +1,13 @@
 mod datum;
 mod node;
 
-use geo::{Rect, GeoFloat, GeoNum};
-use crate::*;
-pub use datum::*;
-use node::PointNode;
-use geom::Distance;
 use super::knn::knn;
 use super::sorted::{sorted, SortIter};
+use crate::*;
+pub use datum::*;
+use geo::{GeoFloat, GeoNum, Rect};
+use geom::Distance;
+use node::PointNode;
 
 /// A quadtree implementation for points.
 #[derive(Debug)]
@@ -40,7 +40,7 @@ where
     }
 
     // Private constructor
-    fn private_new(bounds: Rect<T>, max_depth: Option<u8>, max_children:Option<usize>) -> Self {
+    fn private_new(bounds: Rect<T>, max_depth: Option<u8>, max_children: Option<usize>) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
         let max_children = max_children.unwrap_or(DEFAULT_MAX_CHILDREN);
 
@@ -92,9 +92,9 @@ where
 {
     type Node = PointNode<D, T>;
 
-    fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error> 
+    fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error>
     where
-        X: Distance<T>
+        X: Distance<T>,
     {
         // Error early if invalid
         if cmp.dist_bbox(self.root.bounds())? != T::zero() {
@@ -111,9 +111,11 @@ where
         while let Some(node) = stack.pop() {
             // First look at the current node and check if it should be
             // processed - skip processing if the edge of the node is further
-            // than the current 
+            // than the current
             let bounds_dist = cmp.dist_bbox(node.bounds())?;
-            if bounds_dist >= min_dist { continue; }
+            if bounds_dist >= min_dist {
+                continue;
+            }
 
             // Loop through all the children of the current node, retaining
             // only the currently closest child
@@ -142,7 +144,7 @@ where
 
     fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Result<Vec<(&D, T)>, Error>
     where
-        X: Distance<T>
+        X: Distance<T>,
     {
         knn(&self.root, cmp, k, r)
     }
@@ -181,7 +183,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use geo::{Point, coord};
+    use geo::{coord, Point};
 
     use super::*;
 
@@ -200,12 +202,12 @@ mod tests {
         let origin: Point = Point::new(0.0, 0.0);
         let bounds = Rect::new(origin.0, coord!(x: 1.0, y: 1.0));
         let mut qt = PointQuadTree::from_bounds(bounds);
-        
+
         // Using a data wrapper here
         let pt1 = MyData(0.1, 0.1);
         let pt2 = MyData(0.2, 0.2);
         let pt3 = MyData(0.1, 0.8);
-        
+
         // Initially will be no sub-nodes, no children
         let root = &qt.root;
         assert_eq!(root.depth(), 0);
@@ -216,7 +218,7 @@ mod tests {
         qt.insert(pt1).unwrap();
         qt.insert(pt2).unwrap();
         qt.insert(pt3).unwrap();
-        
+
         // Insert four points, still no sub-nodes, but now four children
         let root = &qt.root;
         assert_eq!(root.nodes.is_none(), true);
@@ -245,23 +247,17 @@ mod tests {
     #[test]
     fn can_change_max_depth_and_max_children_and_subdivide_stops_at_max_depth() {
         let origin: Point = Point::new(0.0, 0.0);
-        let mut qt = PointQuadTree::new(
-            Rect::new(origin.0, coord! { x: 1.0, y: 1.0 }),
-            2,
-            2,
-        );
+        let mut qt = PointQuadTree::new(Rect::new(origin.0, coord! { x: 1.0, y: 1.0 }), 2, 2);
 
         let pt1 = MyData(0.1, 0.1);
-        
+
         qt.insert(pt1).unwrap();
         qt.insert(pt1).unwrap();
         qt.insert(pt1).unwrap();
-        
+
         // All points the same value should immediately max out the depth
         // With the value putting them all in the top left
-        let node = &qt.root
-            .nodes.as_ref().unwrap()[0]
-            .nodes.as_ref().unwrap()[0];
+        let node = &qt.root.nodes.as_ref().unwrap()[0].nodes.as_ref().unwrap()[0];
         assert_eq!(qt.size(), 3);
         assert_eq!(node.depth(), 2);
         assert_eq!(node.children.len(), 3);

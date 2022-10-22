@@ -1,10 +1,10 @@
+use crate::{Datum, Distance, Error, Geometry};
 use core::ops::Deref;
-use std::marker::PhantomData;
-use geo::{Rect, GeoNum, GeoFloat};
+pub use dist::DistEuclidean;
+use geo::{GeoFloat, GeoNum, Rect};
 use num_traits::{FloatConst, Signed};
 use rstar::RTreeNum;
-use crate::{Distance, Datum, Geometry, Error};
-pub use dist::DistEuclidean;
+use std::marker::PhantomData;
 
 mod dist;
 
@@ -22,7 +22,7 @@ where
 
 /// Geometry wrapper type that implements Euclidean distance formulas.
 #[derive(Debug)]
-pub struct Euclidean<X, T> (X, PhantomData<T>)
+pub struct Euclidean<X, T>(X, PhantomData<T>)
 where
     X: Datum<T>,
     T: GeoNum;

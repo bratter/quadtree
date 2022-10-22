@@ -103,7 +103,7 @@ where
         .dist_bbox(root.bounds())
         .ok()
         .and_then(|d| (d == T::zero()).then_some(d));
-    
+
     match root_d {
         Some(d) => SortIter {
             stack: vec![(NodeType::Node(root), d)],

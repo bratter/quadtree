@@ -1,7 +1,7 @@
-use geo::{GeoFloat, Point, Rect, Line, LineString, Polygon};
-use crate::{Geometry, Error};
+use crate::{Error, Geometry};
+use geo::{GeoFloat, Line, LineString, Point, Polygon, Rect};
 
-use super::math::{dist_pt_pt, dist_pt_line, dist_rect_rect, dist_pt_rect};
+use super::math::{dist_pt_line, dist_pt_pt, dist_pt_rect, dist_rect_rect};
 
 // TODO: Add more Haversine implementations, or make distance produce an error instead
 // TODO: Document this, note that we require all inputs in radians and produce all outputs in radians

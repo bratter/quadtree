@@ -1,7 +1,7 @@
 use approx::assert_abs_diff_eq;
-use geo::{Point, Rect, Line, EuclideanDistance, coord};
-use quadtree::*;
+use geo::{coord, EuclideanDistance, Line, Point, Rect};
 use quadtree::spherical::math::dist_pt_pt;
+use quadtree::*;
 
 #[test]
 fn create_empty_retrieve_inside_bounds_returns_empty_vec() {
@@ -163,7 +163,6 @@ fn find_returns_closest_in_euclidean_for_segments_in_bounds_qt() {
     assert_abs_diff_eq!(dist, cmp_dist);
     assert_eq!(datum, &d1);
 
-    
     // Closer to the random line
     let cmp = Euclidean::new(Point::new(0.8, 0.8));
     let (datum, dist) = qt.find(&cmp).unwrap();
@@ -238,7 +237,7 @@ fn knn_on_point_qt_stops_at_r() {
 
     let cmp = Euclidean::new(Point::new(6.0, 5.0));
     let res = qt.knn_r(&cmp, 3, 4.0).unwrap();
-    
+
     assert_eq!(res.len(), 2);
     assert_eq!(res[0].0.x_y(), p3.x_y());
     assert_eq!(res[0].1, 1.0);

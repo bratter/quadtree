@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
-use geo::{Rect, Coordinate, GeoNum};
 use crate::*;
+use geo::{Coordinate, GeoNum, Rect};
 
 #[derive(Debug)]
 pub struct PointNode<D, T>
@@ -40,18 +40,34 @@ where
     }
 
     // Getters
-    fn bounds(&self) -> &Rect<T> { &self.bounds }
-    fn depth(&self) -> u8 { self.depth }
-    fn max_depth(&self) -> u8 { self.max_depth }
-    fn max_children(&self) -> usize { self.max_children }
-    fn nodes(&self) -> &Option<Box<[PointNode<D, T>; 4]>> { &self.nodes }
+    fn bounds(&self) -> &Rect<T> {
+        &self.bounds
+    }
+
+    fn depth(&self) -> u8 {
+        self.depth
+    }
+
+    fn max_depth(&self) -> u8 {
+        self.max_depth
+    }
+
+    fn max_children(&self) -> usize {
+        self.max_children
+    }
+    
+    fn nodes(&self) -> &Option<Box<[PointNode<D, T>; 4]>> {
+        &self.nodes
+    }
 
     fn children(&self) -> DatumIter<Self, D, T> {
         DatumIter::Slice(SliceIter::new(self.children.iter()))
     }
 
     // Setters
-    fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
+    fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) {
+        self.nodes = nodes;
+    }
 
     fn insert(&mut self, datum: D) -> Result<(), Error> {
         // Take ownership of the sub-nodes before matching to enable the insertion
@@ -64,14 +80,14 @@ where
             Some(mut sub_nodes) => {
                 let sub_node_idx = self.find_sub_node(&datum).ok_or(Error::CannotFindSubNode)?;
                 sub_nodes[sub_node_idx as usize].insert(datum)?;
-                
+
                 // Make sure to replace the nodes
                 self.nodes = Some(sub_nodes);
-            },
+            }
             // If there is no room left, subdivide and push all children down
             // Subdivision does not happen if we've exceeded the max depth,
             // which takes priority over the children length
-            None if self.children.len() >= self.max_children && !(self.depth >= self.max_depth)  => {
+            None if self.children.len() >= self.max_children && !(self.depth >= self.max_depth) => {
                 self.subdivide();
 
                 // Replace the old children with a new empty vector
@@ -80,7 +96,9 @@ where
                 children.push(datum);
 
                 // Now consume the original children vector
-                for pt in children { self.insert(pt)?; }
+                for pt in children {
+                    self.insert(pt)?;
+                }
             }
             // Otherwise can simply push the point
             None => {
@@ -100,10 +118,8 @@ where
                 } else {
                     DatumIter::Empty
                 }
-            },
-            None => {
-                self.children()
             }
+            None => self.children(),
         }
     }
 }

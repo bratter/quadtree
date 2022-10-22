@@ -1,9 +1,9 @@
-use geo::{GeoFloat, Point, Rect, Line, EuclideanDistance, LineString, Polygon};
+use geo::{EuclideanDistance, GeoFloat, Line, LineString, Point, Polygon, Rect};
 use num_traits::{FloatConst, Signed};
 use rstar::RTreeNum;
-use crate::Geometry;
 
 use super::math::dist_rect_rect;
+use crate::Geometry;
 
 pub trait DistEuclidean<T, Rhs = Self> {
     fn dist_euclidean(&self, rhs: &Rhs) -> T;

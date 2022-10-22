@@ -8,10 +8,15 @@ use crate::*;
 /// QT implementations can simply delegate to this function.
 /// Note that unlike find, knn will not return Err for empty trees as it is not
 /// necessary (find would return an Err anyway).
-/// 
+///
 /// This could be implemented in terms of the `sorted` function with
 /// `take_while`, but here we have more aggressive error semantics.
-pub(crate) fn knn<'a, D, N, X, T>(root: &'a N, cmp: &X, k: usize, r: T) -> Result<Vec<(&'a D, T)>, Error>
+pub(crate) fn knn<'a, D, N, X, T>(
+    root: &'a N,
+    cmp: &X,
+    k: usize,
+    r: T,
+) -> Result<Vec<(&'a D, T)>, Error>
 where
     N: Node<D, T>,
     D: Datum<T>,
@@ -32,30 +37,36 @@ where
     // Traverse the work stack in distance sorted order
     loop {
         // 1. Sort the stack in distance-descending order
-        work_stack.sort_unstable_by(
-            |(_, d1), (_, d2)|
-            d2.partial_cmp(d1).expect("Unreachable, NaN distances already removed.")
-        );
+        work_stack.sort_unstable_by(|(_, d1), (_, d2)| {
+            d2.partial_cmp(d1)
+                .expect("Unreachable, NaN distances already removed.")
+        });
 
         // 2. Process any Children at the top of the stack
         //    Done in an inner loop to prevent re-sorting if multiple
         //    children are on top
         while let Some(&(NodeType::Child(child), d)) = work_stack.last() {
             // If the distance is > r, we are done completely
-            if d > r { return Ok(results); }
+            if d > r {
+                return Ok(results);
+            }
 
             // Pop the stack once we know its a child
             work_stack.pop();
 
             // Push the result, returning if we've reached k results
             results.push((child, d));
-            if results.len() >= k { return Ok(results); }
+            if results.len() >= k {
+                return Ok(results);
+            }
         }
 
         // 3. Push sub Nodes and Children onto the stack if inside the radius
         //    We know that the top of the stack is either None or Some(Node(...))
         if let Some((NodeType::Node(node), d)) = work_stack.pop() {
-            if d > r { return Ok(results); }
+            if d > r {
+                return Ok(results);
+            }
 
             for child in node.children() {
                 let d = cmp.dist_geom(&child.geometry())?;

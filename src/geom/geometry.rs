@@ -1,4 +1,4 @@
-use geo::{Rect, GeoNum, Point, Line, LineString, Polygon, BoundingRect};
+use geo::{BoundingRect, GeoNum, Line, LineString, Point, Polygon, Rect};
 
 /// Enum to capture the geo-types that can be used as Datums
 #[derive(Debug, Clone)]

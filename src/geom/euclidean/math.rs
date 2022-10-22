@@ -1,4 +1,4 @@
-use geo::{Rect, EuclideanDistance, GeoFloat, coord};
+use geo::{coord, EuclideanDistance, GeoFloat, Rect};
 
 /// Calculate the euclidean distance between two rectangles
 pub fn dist_rect_rect<T>(r1: &Rect<T>, r2: &Rect<T>) -> T

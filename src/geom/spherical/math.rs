@@ -1,6 +1,6 @@
+use geo::{coord, GeoFloat, Line, Point, Rect};
 use std::f64::consts::PI;
 use std::ops::{Add, Sub};
-use geo::{Point, Line, Rect, GeoFloat, coord};
 
 use crate::geom::pt_in_rect;
 
@@ -62,7 +62,7 @@ where
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Lng::from(self.0 + rhs.0)  
+        Lng::from(self.0 + rhs.0)
     }
 }
 
@@ -96,12 +96,12 @@ where
 /// Calculate the great circle distance between a point `p` and a line segment
 /// defined by its two endpoints `p1` and `p2`. Inputs and outputs are in
 /// radians. Convert radians to any distance unit by multiplying by the radius.
-/// 
+///
 /// Inputs must be provided as `(lng, lat)` radian tuples.
-/// 
+///
 /// Squared versions are not required as there is no final `.sqrt()` in the
 /// haversine formula.
-/// 
+///
 /// Adapted from: https://github.com/Turfjs/turf/blob/master/packages/turf-point-to-line-distance/index.ts
 pub fn dist_pt_line<T>(pt: &Point<T>, line: &Line<T>) -> T
 where
@@ -120,7 +120,11 @@ where
 
     // Wrap in an `if` to account for a zero line length
     // Just has to be <0 to work so we pick distance to p1
-    let param = if len_sq == T::zero() { -T::one() } else { dot / len_sq };
+    let param = if len_sq == T::zero() {
+        -T::one()
+    } else {
+        dot / len_sq
+    };
 
     if param < T::zero() {
         // Closest to start point, so reduces to pt-pt
@@ -191,8 +195,12 @@ where
             let d1 = (r1.min().y - r2.max().y).abs();
             let d2 = (r2.min().y - r1.max().y).abs();
 
-            if d1 < d2 { d1 } else { d2 }
-        },
+            if d1 < d2 {
+                d1
+            } else {
+                d2
+            }
+        }
         // If y (lat) overlaps, then find the point of overlap with the
         // maximum abs value of lat (closest to the poles) and calc
         // distance for this lat and the respective lngs
@@ -200,7 +208,11 @@ where
             // Point of max overlap is the min of the bounds maxes
             let min_lat = r1.min().y.max(r2.min().y);
             let max_lat = r1.max().y.min(r2.max().y);
-            let lat = if min_lat.abs() > max_lat.abs() { min_lat } else { max_lat };
+            let lat = if min_lat.abs() > max_lat.abs() {
+                min_lat
+            } else {
+                max_lat
+            };
 
             // Easiest way to adjust for lng wrapping is to take the pair
             // with the min lng delta, because Lng::sub deals with wrapping
@@ -212,7 +224,7 @@ where
             } else {
                 dist_pt_pt(&p!(r1.min().x, lat), &p!(r2.max().x, lat))
             }
-        },
+        }
         // When neither overlaps, take the distance from the closest
         // corners, accounting for wrapping lngs
         (false, false) => {
@@ -233,15 +245,15 @@ where
             };
 
             dist_pt_pt(&p!(x1, y1), &p!(x2, y2))
-        },
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::f64::consts::*;
     use approx::assert_abs_diff_eq;
     use geo::{Point, Rect};
+    use std::f64::consts::*;
 
     use super::*;
 
@@ -274,7 +286,9 @@ mod tests {
 
         // Check that wrappung subtraction works for large negatives
         // Using an approximate match to avoid floating point issues
-        let res: f64 = (Lng::from(-7.0 * FRAC_PI_8) - Lng::from(7.0 * FRAC_PI_8) - Lng::from(FRAC_PI_4)).into();
+        let res: f64 =
+            (Lng::from(-7.0 * FRAC_PI_8) - Lng::from(7.0 * FRAC_PI_8) - Lng::from(FRAC_PI_4))
+                .into();
         assert!(res < 1e-6);
     }
 
@@ -284,36 +298,36 @@ mod tests {
         let b1 = Rect::new(p!(0.1, -0.1), p!(0.5, 0.4));
 
         // Test an overlap
-        let b2 = Rect::new(p!(0.2, 0.0), p!(1.0 , 0.8));
+        let b2 = Rect::new(p!(0.2, 0.0), p!(1.0, 0.8));
         assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), 0.0);
-        
+
         // Test touching
-        let b2 = Rect::new(p!(0.5, 0.0), p!(0.6 , 0.2));
+        let b2 = Rect::new(p!(0.5, 0.0), p!(0.6, 0.2));
         assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), 0.0);
 
         // Test lat above - simple as the distance should just be the delta in radians
-        let b2 = Rect::new(p!(0.1, 0.6), p!(0.3 , 0.8));
+        let b2 = Rect::new(p!(0.1, 0.6), p!(0.3, 0.8));
         assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), 0.2);
 
         // Test lat below
-        let b2 = Rect::new(p!(0.1, -0.4), p!(0.3 , -0.5));
+        let b2 = Rect::new(p!(0.1, -0.4), p!(0.3, -0.5));
         assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), 0.3);
 
         // Test lng greater than, min dist @ 0.4, b2 ends higher
-        let b2 = Rect::new(p!(0.6, 0.2), p!(0.8 , 0.6));
+        let b2 = Rect::new(p!(0.6, 0.2), p!(0.8, 0.6));
         let d = dist_pt_pt(&p!(0.5, 0.4), &p!(0.6, 0.4));
         assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
-        
+
         // Test lng greater than, min dist @ -0.1, b2 starts lower
         let b2 = Rect::new(p!(0.7, -0.2), p!(0.8, -0.1));
         let d = dist_pt_pt(&p!(0.5, -0.1), &p!(0.7, -0.1));
         assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
-        
+
         // Test lng less than - min dist @ 0.3, b1 ends higher
         let b2 = Rect::new(p!(-0.2, 0.0), p!(-0.1, 0.3));
         let d = dist_pt_pt(&p!(0.1, 0.3), &p!(-0.1, 0.3));
         assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
-        
+
         // Test corner - top left
         let b2 = Rect::new(p!(-0.2, -0.3), p!(-0.1, -0.2));
         let d = dist_pt_pt(&p!(0.1, -0.1), &p!(-0.1, -0.2));
@@ -334,7 +348,7 @@ mod tests {
         let d = dist_pt_pt(&p!(0.1, 0.4), &p!(-0.6, 0.7));
         assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
     }
-    
+
     #[test]
     fn rect_dist_works_when_on_other_side_of_antimeridian() {
         let b1 = Rect::new(p!(2.9, 0.0), p!(3.0, 0.4));

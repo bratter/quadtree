@@ -1,6 +1,6 @@
 use geo::{GeoNum, Point, Rect};
 
-use crate::{Geometry, Error};
+use crate::{Error, Geometry};
 
 // Module declarations
 pub mod euclidean;

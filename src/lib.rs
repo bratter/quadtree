@@ -1,8 +1,8 @@
 /*
  * Quadtree Package.
- * 
+ *
  * Multiple quadtree implementations for various geometries.
- * 
+ *
  * TODO: Write documentation for everything (noted as todos in top-level files) and run rustfmt over all files
  * TODO: Add clear and remove operations to the quadtree trait
  * TODO: Add more Haversine implementations for Spherical math
@@ -14,26 +14,26 @@
  *       This is wrong and should probably use > not >=
  */
 
-mod geom;
-mod quadtrees;
-mod node;
-mod iter;
 mod error;
+mod geom;
+mod iter;
+mod node;
+mod quadtrees;
 
 use geom::*;
-use node::*;
 use iter::*;
+use node::*;
 
 // Export the quadtree traits/constants, and implementations
-pub use quadtrees::*;
-pub use quadtrees::point::*;
-pub use quadtrees::bounds::*;
 pub use error::*;
+pub use quadtrees::bounds::*;
+pub use quadtrees::point::*;
+pub use quadtrees::*;
 
 // Export geometry items
-pub use geom::geometry::*;
 pub use geom::euclidean;
 pub use geom::euclidean::*;
+pub use geom::geometry::*;
 pub use geom::spherical;
-pub use geom::spherical::*;
 pub use geom::spherical::to_radians::*;
+pub use geom::spherical::*;
