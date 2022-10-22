@@ -6,6 +6,7 @@ use crate::Error;
 use crate::iter::{DatumIter, DescendantIter};
 
 /// Sub-node indicies.
+#[derive(Debug, Clone, Copy)]
 pub enum SubNode {
     TopLeft = 0,
     TopRight = 1,
@@ -72,17 +73,18 @@ where
 
     fn retrieve(&self, datum: &D) -> DatumIter<'_, Self, D, T>;
 
-    // TODO: This should Option
-    fn find_sub_node(&self, datum: &D) -> SubNode {
-        let (x, y) = Self::datum_position(datum).unwrap().x_y();
+    fn find_sub_node(&self, datum: &D) -> Option<SubNode> {
+        let (x, y) = Self::datum_position(datum)?.x_y();
         let two = T::one() + T::one();
         let left = x <= self.bounds().width() / two;
         let top = y <= self.bounds().height() / two;
 
-        if left && top { SubNode::TopLeft }
-        else if !left && top { SubNode::TopRight }
-        else if left && !top { SubNode::BottomLeft }
-        else { SubNode::BottomRight }
+        let sn = if left && top { SubNode::TopLeft }
+            else if !left && top { SubNode::TopRight }
+            else if left && !top { SubNode::BottomLeft }
+            else { SubNode::BottomRight };
+
+        Some(sn)
     }
 
     fn subdivide(&mut self) {

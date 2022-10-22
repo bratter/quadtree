@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
-use geo::{Rect, Coordinate, Intersects, BoundingRect, GeoNum};
 use crate::*;
+use geo::{BoundingRect, Coordinate, GeoNum, Intersects, Rect};
 
 #[derive(Debug)]
 pub struct BoundsNode<D, T>
@@ -38,42 +38,51 @@ where
     }
 
     fn datum_position(datum: &D) -> Option<Coordinate<T>> {
-        // SAFETY: Unwrap here is Ok because bbox generation is required to
-        // insert, and we ensure it returns before this is called on insertion
         let bbox = datum.geometry().bounding_rect()?;
         let (x, y) = bbox.min().x_y();
         let two = T::one() + T::one();
-        
-        Some(Coordinate { x: x + bbox.width() / two, y: y + bbox.height() / two })
+
+        Some(Coordinate {
+            x: x + bbox.width() / two,
+            y: y + bbox.height() / two,
+        })
     }
 
     // Getters
-    fn bounds(&self) -> &Rect<T> { &self.bounds }
-    fn depth(&self) -> u8 { self.depth }
-    fn max_depth(&self) -> u8 { self.max_depth }
-    fn max_children(&self) -> usize { self.max_children }
-    fn nodes(&self) -> &Option<Box<[Self; 4]>> { &self.nodes }
+    fn bounds(&self) -> &Rect<T> {
+        &self.bounds
+    }
+    fn depth(&self) -> u8 {
+        self.depth
+    }
+    fn max_depth(&self) -> u8 {
+        self.max_depth
+    }
+    fn max_children(&self) -> usize {
+        self.max_children
+    }
+    fn nodes(&self) -> &Option<Box<[Self; 4]>> {
+        &self.nodes
+    }
 
     fn children(&self) -> DatumIter<Self, D, T> {
-        DatumIter::ChainSlice(
-            ChainSliceIter::new(
-                self.children.iter().chain(&self.stuck_children)
-            )
-        )
+        DatumIter::ChainSlice(ChainSliceIter::new(
+            self.children.iter().chain(&self.stuck_children),
+        ))
     }
 
     // Setters
-    fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) { self.nodes = nodes; }
+    fn set_nodes(&mut self, nodes: Option<Box<[Self; 4]>>) {
+        self.nodes = nodes;
+    }
 
     fn insert(&mut self, datum: D) -> Result<(), Error> {
         // See notes in the PointQuadTree implementation on take
         match self.nodes.take() {
             // If we have sub-nodes already, pass down the tree
-            // Also works for stuck nodes, will be pushed down as far as they can go 
+            // Also works for stuck nodes, will be pushed down as far as they can go
             Some(mut sub_nodes) => {
                 // Generate the bounding box for the geometry, which may fail
-                // SAFTEY: Do this before find_sub_node to ensure bbox fails
-                // are captured and the unwrap in find_sub_ndoe won't trigger
                 let bbox = datum
                     .geometry()
                     .bounding_rect()
@@ -81,7 +90,7 @@ where
 
                 // Get the index of the datum - will be based on the datum's
                 // top-left point from its bounds
-                let sub_node_idx = self.find_sub_node(&datum);
+                let sub_node_idx = self.find_sub_node(&datum).ok_or(Error::CannotFindSubNode)?;
                 let sub_node = &mut sub_nodes[sub_node_idx as usize];
 
                 // Check if the datum is totally contained by the sub-node
@@ -105,44 +114,43 @@ where
                 children.push(datum);
 
                 // Re-insert all children
-                for pt in children { self.insert(pt)?; }
+                for pt in children {
+                    self.insert(pt)?;
+                }
             }
             // Otherwise can simply push the point
-            None => self.children.push(datum)
+            None => self.children.push(datum),
         }
 
         Ok(())
     }
 
     fn retrieve(&self, datum: &D) -> DatumIter<'_, BoundsNode<D, T>, D, T> {
-        // Get all the data from all nodes that intersect with the passed datum
-        let descendants = if let Some(nodes) = &self.nodes {
-            let sub_node = &nodes[self.find_sub_node(datum) as usize];
-
-            // bounding_rect can fail, in which case here we retrieve nothing
-            match datum.geometry().bounding_rect() {
-                Some(bbox) => {
-                    if rect_in_rect(sub_node.bounds(), &bbox) {
-                        sub_node.retrieve(datum)
-                    } else {
-                        let mut inner = DatumIter::Empty;
-                        // Return the entire contents of any overlapping node
-                        // Same semantics as https://github.com/mikechambers/ExamplesByMesh/blob/master/JavaScript/QuadTree/src/QuadTree.js
-                        // TODO: Does geo::Intersects have the right semantics for border-cases?
-                        for sub_node in &**nodes {
-                            if sub_node.bounds().intersects(&bbox) {
-        
-                                inner = DatumIter::ChainSelf(
-                                    ChainSelfIter::new(inner, sub_node.descendants())
-                                );
-                            }
-                        }
-                        inner
+        // Process all three functions that produce options in one hit
+        // Descendants overall will produce an iterator of children in all nodes
+        // that intersect with the passed node
+        let descendants = if let Some(((nodes, sn_index), bbox)) = self
+            .nodes.as_ref()
+            .zip(self.find_sub_node(datum))
+            .zip(datum.geometry().bounding_rect())
+        {
+            let sub_node = &nodes[sn_index as usize];
+            if rect_in_rect(sub_node.bounds(), &bbox) {
+                sub_node.retrieve(datum)
+            } else {
+                let mut inner = DatumIter::Empty;
+                // Return the entire contents of any overlapping node
+                // Same semantics as https://github.com/mikechambers/ExamplesByMesh/blob/master/JavaScript/QuadTree/src/QuadTree.js
+                for sub_node in &**nodes {
+                    if sub_node.bounds().intersects(&bbox) {
+                        inner = DatumIter::ChainSelf(ChainSelfIter::new(
+                            inner,
+                            sub_node.descendants(),
+                        ));
                     }
-                },
-                None => DatumIter::Empty,
+                }
+                inner
             }
-            
         } else {
             DatumIter::Empty
         };

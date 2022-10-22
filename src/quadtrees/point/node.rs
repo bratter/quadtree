@@ -62,7 +62,7 @@ where
         match self.nodes.take() {
             // If we have sub-nodes already, pass down the tree
             Some(mut sub_nodes) => {
-                let sub_node_idx = self.find_sub_node(&datum);
+                let sub_node_idx = self.find_sub_node(&datum).ok_or(Error::CannotFindSubNode)?;
                 sub_nodes[sub_node_idx as usize].insert(datum)?;
                 
                 // Make sure to replace the nodes
@@ -95,7 +95,11 @@ where
     fn retrieve(&self, datum: &D) -> DatumIter<'_, PointNode<D, T>, D, T> {
         match &self.nodes {
             Some(nodes) => {
-                nodes[self.find_sub_node(datum) as usize].retrieve(datum)
+                if let Some(sn) = self.find_sub_node(datum) {
+                    nodes[sn as usize].retrieve(datum)
+                } else {
+                    DatumIter::Empty
+                }
             },
             None => {
                 self.children()

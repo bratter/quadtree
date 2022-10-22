@@ -3,14 +3,12 @@
  * 
  * Multiple quadtree implementations for various geometries.
  * 
- * TODO: Add other failure conditions in find/knn e.g. at least haversine distance calc can fail, so dist_geom should be a result, and maybe other bbox functions also
+ * TODO: Convert distance into a result, make missing haversine return a NotImplemented then add failure condition in find/knn
  * TODO: Distance sorted iterator
- * TODO: Retrieve as an iterator that doesn't error, just straight to None if out of bounds, or bbox fails (start by converting get_all_children to an iterator)
- * TODO: Document or test that retrieve.filter can give intersections or contains; convert retrieve to an iterator?
  * TODO: Write documentation for everything
  * TODO: Add more Haversine implementations for Spherical math
- * TODO: Force constraints on spherical coords?
  * TODO: Add clear and remove operations to the quadtree trait
+ * TODO: Force constraints on spherical coords?
  * TODO: Build an integer-with-power-2-bounds version?
  * TODO: Should nodes and children be private on the node structs?
  * TODO: Make a PR for the geo crate to add extra euclidean and haversine distance measures for Rect

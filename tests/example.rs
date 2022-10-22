@@ -73,14 +73,18 @@ fn euclidean_point_example() {
     let str = format!("{}", qt);
     assert!(str.contains("Point Quadtree"));
 
-    // Retrieve from the quadtree based on a passed datum
+    // Retrieve from the quadtree based on a passed datum returns an iterator
     // This is used for collision detection, etc. and will work best
     // in evenly populated quadtrees
-    // TODO: Return as an iterator and test
-    // qt.retrieve(datum)
+    let res: Vec<_> = qt.retrieve(&datum(42, 12.0, 12.0)).collect();
+    assert_eq!(res, vec![&data[5]]);
 
-    // Can filter/map etc. using the iterator to, for example filter by some metadata
-    // TODO: Do this
+    // Can filter/map etc. using the iterator to, for example, filter by some metadata
+    // Here we grab from a populated node, filter some points out and grab the id only
+    let res = qt.retrieve(&datum(42, 0.5, 0.5))
+        .filter(|d| d.id >= 2)
+        .map(|d| d.id);
+    assert_eq!(res.collect::<Vec<_>>(), vec![4, 8]);
 
     // The standard iterator walks the quadtree in preorder, with each node
     // being walked counter-clockwise (on a Euclidean plane) from the lowest
