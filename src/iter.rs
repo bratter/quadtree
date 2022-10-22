@@ -6,6 +6,7 @@ use geo::GeoNum;
 
 use super::*;
 
+// TODO: Docs
 pub enum DatumIter<'a, N, D, T>
 where
     N: Node<D, T>,

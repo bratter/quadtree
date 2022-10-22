@@ -20,11 +20,13 @@ pub const DEFAULT_MAX_DEPTH: u8 = 4;
 /// 
 /// Requires a single generic `D`, the types of the Datum that the QuadTree
 /// will hold.
-pub trait QuadTree<N, D, T>
+pub trait QuadTree<D, T>
 where
-    N: Node<D, T>,
     T: GeoNum,
 {
+    /// The specific node built for this QuadTree implementation
+    type Node: Node<D, T>;
+
     /// Return the number of datums currently stored in the quadtree.
     fn size(&self) -> usize;
 
@@ -36,10 +38,7 @@ where
     /// 
     /// This retrieval is useful for collision detection and other spatial
     /// approximations, and works best when the quadtree is evenly populated.
-    /// 
-    // TODO: When this becomes an iterator, the iterator version should take a
-    //       different generic for D.
-    fn retrieve(&self, datum: &D) -> DatumIter<'_, N, D, T>;
+    fn retrieve(&self, datum: &D) -> DatumIter<'_, Self::Node, D, T>;
 }
 
 /// Add on QuadTree trait that adds distance-based search methods to a
@@ -47,12 +46,14 @@ where
 /// 
 /// This trait constrains the available numeric type implementations to
 /// [`GeoFloat`] as floating point math is required to measure distances. 
-pub trait QuadTreeSearch<N, D, T>
+pub trait QuadTreeSearch<D, T>
 where
-    N: Node<D, T>,
     D: Datum<T>,
     T: GeoFloat,
 {
+    /// The specific node built for this QuadTree implementation
+    type Node: Node<D, T>;
+
     /// Find the closest datum in the quadtree to the passed comparator.
     /// 
     /// Returns the datum and the distance to the point in a tuple, wrapped in
@@ -133,7 +134,6 @@ where
     where
         X: Distance<T>;
 
-    // TODO: Docs
     /// Iterate through all data in the QuadTree in distance-sorted order.
     /// 
     /// The algorithm uses a partial unstable sort, so it makes no ordering
@@ -148,8 +148,7 @@ where
     /// See [`QuadTreeSearch::find`] for more information. Similarly the
     /// underlying type must implement [`Datum`], which comes for free with
     /// any [`crate::Geometry`] type.
-    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, N, D, X, T>
+    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, Self::Node, D, X, T>
     where
-        X: Distance<T>,
-        N: Node<D, T>;
+        X: Distance<T>;
 }

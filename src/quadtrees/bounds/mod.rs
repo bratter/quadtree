@@ -49,11 +49,13 @@ where
     }
 }
 
-impl<D, T> QuadTree<BoundsNode<D, T>, D, T> for BoundsQuadTree<D, T>
+impl<D, T> QuadTree<D, T> for BoundsQuadTree<D, T>
 where
     D: Datum<T>,
     T: GeoNum,
 {
+    type Node = BoundsNode<D, T>;
+
     fn size(&self) -> usize {
         self.size
     }
@@ -76,23 +78,28 @@ where
         }
     }
 
-    fn retrieve(&self, datum: &D) -> DatumIter<'_, BoundsNode<D, T>, D, T> {
-        // TODO: Convert to ok_or when these can return errors... or maybe this should just return empty? 
-        let bbox = datum.geometry().bounding_rect().unwrap();
-        // Cannot use Rect::contains here, see notes on rect_in_rect for why
-        if rect_in_rect(self.root.bounds(), &bbox) {
-            self.root.retrieve(datum)
+    fn retrieve(&self, datum: &D) -> DatumIter<'_, Self::Node, D, T> {
+        // Squash errors and return an empty iterator if we can't get the bbox
+        if let Some(bbox) = datum.geometry().bounding_rect() {
+            // Cannot use Rect::contains here, see notes on rect_in_rect for why
+            if rect_in_rect(self.root.bounds(), &bbox) {
+                self.root.retrieve(datum)
+            } else {
+                DatumIter::Empty
+            }
         } else {
             DatumIter::Empty
         }
     }
 }
 
-impl<D, T> QuadTreeSearch<BoundsNode<D, T>, D, T> for BoundsQuadTree<D, T>
+impl<D, T> QuadTreeSearch<D, T> for BoundsQuadTree<D, T>
 where
     D: Datum<T>,
     T: GeoFloat,
 {
+    type Node = BoundsNode<D, T>;
+
     fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error> 
     where
         X: Distance<T>
@@ -123,7 +130,6 @@ where
                 // bounds. This optimization may not always be faster, but if
                 // the bbox is expensive to calculate then the distance likely
                 // is also.
-                // TODO: Because this might fail, should we just pass through?
                 let bbox = child
                     .geometry()
                     .bounding_rect()
@@ -157,7 +163,7 @@ where
         knn(&self.root, cmp, k, r)
     }
 
-    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, BoundsNode<D, T>, D, X, T>
+    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, Self::Node, D, X, T>
     where
         X: Distance<T>,
     {

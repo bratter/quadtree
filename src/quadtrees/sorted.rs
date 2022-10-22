@@ -2,6 +2,7 @@ use geo::GeoFloat;
 
 use crate::*;
 
+// TODO: Docs
 /// Iterator to output QuadTree data in distance-sorted order.
 pub struct SortIter<'a, N, D, X, T>
 where

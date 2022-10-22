@@ -51,11 +51,13 @@ where
     }
 }
 
-impl<D, T> QuadTree<PointNode<D, T>, D, T> for PointQuadTree<D, T>
+impl<D, T> QuadTree<D, T> for PointQuadTree<D, T>
 where
     D: PointDatum<T>,
     T: GeoNum,
 {
+    type Node = PointNode<D, T>;
+
     fn size(&self) -> usize {
         self.size
     }
@@ -71,8 +73,7 @@ where
         }
     }
 
-    // TODO: Temporary implementation to get the public interface working
-    fn retrieve(&self, pt: &D) -> DatumIter<'_, PointNode<D, T>, D, T> {
+    fn retrieve(&self, pt: &D) -> DatumIter<'_, Self::Node, D, T> {
         // Bounds check first - capturing out of bounds here
         // This trusts the Node implementation to act correctly
         // Cannot use Rect::contains here, see notes on pt_in_rect for why
@@ -84,11 +85,13 @@ where
     }
 }
 
-impl<D, T> QuadTreeSearch<PointNode<D, T>, D, T> for PointQuadTree<D, T>
+impl<D, T> QuadTreeSearch<D, T> for PointQuadTree<D, T>
 where
     D: Datum<T> + PointDatum<T>,
     T: GeoFloat,
 {
+    type Node = PointNode<D, T>;
+
     fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error> 
     where
         X: Distance<T>
@@ -144,7 +147,7 @@ where
         knn(&self.root, cmp, k, r)
     }
 
-    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, PointNode<D, T>, D, X, T>
+    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, Self::Node, D, X, T>
     where
         X: Distance<T>,
     {
