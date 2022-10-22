@@ -16,6 +16,7 @@ pub enum SubNode {
 
 /// Internal enum to track whether an element in a Node iterator or stack is a
 /// child datum or a sub-node.
+#[derive(Debug, Clone)]
 pub enum NodeType<'a, N, D, T>
 where
     N: Node<D, T>,

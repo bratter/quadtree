@@ -2,7 +2,7 @@ use core::ops::Deref;
 use std::marker::PhantomData;
 use geo::{Rect, GeoNum, GeoFloat};
 use num_traits::FromPrimitive;
-use crate::{Distance, Datum, Geometry};
+use crate::{Distance, Datum, Geometry, Error};
 pub use dist::DistHaversine;
 
 mod dist;
@@ -20,11 +20,10 @@ pub mod to_radians;
 /// Extracted as-is from geo-rust source
 pub const MEAN_EARTH_RADIUS: f64 = 6371008.8;
 
-// TODO: Replace Test with X throughout
 /// Convenience function to wrap a `Test` item with a Spherical geometry wrapper.
-pub fn sphere<Test, T>(test: Test) -> Spherical<Test, T>
+pub fn sphere<X, T>(test: X) -> Spherical<X, T>
 where
-    Test: Datum<T>,
+    X: Datum<T>,
     T: GeoNum,
 {
     Spherical(test, PhantomData)
@@ -32,46 +31,46 @@ where
 
 /// Geometry wrapper type that implements Haversine distance formulas.
 #[derive(Debug)]
-pub struct Spherical<Test, T> (Test, PhantomData<T>)
+pub struct Spherical<X, T> (X, PhantomData<T>)
 where
-    Test: Datum<T>,
+    X: Datum<T>,
     T: GeoNum;
 
-impl<Test, T> Spherical<Test, T>
+impl<X, T> Spherical<X, T>
 where
-    Test: Datum<T>,
+    X: Datum<T>,
     T: GeoNum,
 {
     /// Wrap a `Test` item with a Spherical geometry wrapper.
-    pub fn new(t: Test) -> Self {
+    pub fn new(t: X) -> Self {
         Self(t, PhantomData)
     }
 }
 
-impl<Test, T> Distance<T> for Spherical<Test, T>
+impl<X, T> Distance<T> for Spherical<X, T>
 where
-    Test: Datum<T>,
+    X: Datum<T>,
     T: GeoFloat + FromPrimitive,
 {
-    fn dist_geom(&self, geom: &Geometry<T>) -> T {
+    fn dist_geom(&self, geom: &Geometry<T>) -> Result<T, Error> {
         let test_geom = self.0.geometry();
 
         test_geom.dist_haversine(&geom)
     }
 
-    fn dist_bbox(&self, bbox: &Rect<T>) -> T {
+    fn dist_bbox(&self, bbox: &Rect<T>) -> Result<T, Error> {
         let test_geom = self.0.geometry();
 
         bbox.dist_haversine(&test_geom)
     }
 }
 
-impl<Test, T> Deref for Spherical<Test, T>
+impl<X, T> Deref for Spherical<X, T>
 where
-    Test: Datum<T>,
+    X: Datum<T>,
     T: GeoNum,
 {
-    type Target = Test;
+    type Target = X;
 
     fn deref(&self) -> &Self::Target {
         &self.0

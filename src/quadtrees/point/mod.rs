@@ -97,7 +97,7 @@ where
         X: Distance<T>
     {
         // Error early if invalid
-        if cmp.dist_bbox(self.root.bounds()) != T::zero() {
+        if cmp.dist_bbox(self.root.bounds())? != T::zero() {
             return Err(Error::OutOfBounds);
         }
         if self.size == 0 {
@@ -112,13 +112,13 @@ where
             // First look at the current node and check if it should be
             // processed - skip processing if the edge of the node is further
             // than the current 
-            let bounds_dist = cmp.dist_bbox(node.bounds());
+            let bounds_dist = cmp.dist_bbox(node.bounds())?;
             if bounds_dist >= min_dist { continue; }
 
             // Loop through all the children of the current node, retaining
             // only the currently closest child
             for child in node.children() {
-                let child_dist = cmp.dist_geom(&child.geometry());
+                let child_dist = cmp.dist_geom(&child.geometry())?;
                 // Using <= here so points at a distance equal to r will be
                 // returned, but this also slightly changes which Datum will
                 // be returned if they are equal distances away. This is fine

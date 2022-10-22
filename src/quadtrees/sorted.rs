@@ -30,8 +30,10 @@ where
         // 1. Sort the stack in distance-descending order
         //    Only do this if the is_sorted flag is false
         if !self.is_sorted {
-            self.stack.sort_unstable_by(|(_, d1), (_, d2)|
-            d2.partial_cmp(d1).expect("Unreachable, NaN distances already removed."));
+            self.stack.sort_unstable_by(|(_, d1), (_, d2)| {
+                d2.partial_cmp(d1)
+                    .expect("Unreachable, NaN distances already removed.")
+            });
         }
 
         // 2. Return early if the stack is empty
@@ -48,18 +50,24 @@ where
             //    Then recurse because we have not returned anything
             NodeType::Node(node) => {
                 for child in node.children() {
-                    let d = self.cmp.dist_geom(&child.geometry());
-
-                    if d.is_finite() {
+                    if let Some(d) = self
+                        .cmp
+                        .dist_geom(&child.geometry())
+                        .ok()
+                        .and_then(|d| d.is_finite().then_some(d))
+                    {
                         self.stack.push((NodeType::Child(child), d));
                     }
                 }
 
                 if let Some(nodes) = node.nodes() {
                     for sub_node in nodes.iter() {
-                        let d = self.cmp.dist_bbox(sub_node.bounds());
-
-                        if d.is_finite() {
+                        if let Some(d) = self
+                            .cmp
+                            .dist_bbox(sub_node.bounds())
+                            .ok()
+                            .and_then(|d| d.is_finite().then_some(d))
+                        {
                             self.stack.push((NodeType::Node(sub_node), d));
                         }
                     }
@@ -89,20 +97,23 @@ where
     X: Distance<T>,
     T: GeoFloat,
 {
-    // Simply return an empty iterator if the bbox is out of bounds
-    let root_d = cmp.dist_bbox(root.bounds());
-    if root_d != T::zero() {
-        return SortIter {
+    // Simply return an empty iterator if the bbox is out of bounds or the
+    // distance calc fails
+    let root_d = cmp
+        .dist_bbox(root.bounds())
+        .ok()
+        .and_then(|d| (d == T::zero()).then_some(d));
+    
+    match root_d {
+        Some(d) => SortIter {
+            stack: vec![(NodeType::Node(root), d)],
+            cmp,
+            is_sorted: false,
+        },
+        None => SortIter {
             stack: vec![],
             cmp,
             is_sorted: true,
-        };
-    }
-
-    // Initialize the inner iterator
-    SortIter {
-        stack: vec![(NodeType::Node(root), root_d)],
-        cmp,
-        is_sorted: false,
+        },
     }
 }

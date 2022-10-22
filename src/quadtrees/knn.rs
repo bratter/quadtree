@@ -19,7 +19,7 @@ where
     T: GeoFloat,
 {
     // Error early on invalid inputs
-    let root_d = cmp.dist_bbox(root.bounds());
+    let root_d = cmp.dist_bbox(root.bounds())?;
     if root_d != T::zero() {
         return Err(Error::OutOfBounds);
     }
@@ -58,7 +58,7 @@ where
             if d > r { return Ok(results); }
 
             for child in node.children() {
-                let d = cmp.dist_geom(&child.geometry());
+                let d = cmp.dist_geom(&child.geometry())?;
 
                 if !d.is_finite() {
                     return Err(Error::InvalidDistance);
@@ -69,7 +69,7 @@ where
 
             if let Some(nodes) = node.nodes() {
                 for sub_node in nodes.iter() {
-                    let d = cmp.dist_bbox(sub_node.bounds());
+                    let d = cmp.dist_bbox(sub_node.bounds())?;
 
                     if !d.is_finite() {
                         return Err(Error::InvalidDistance);

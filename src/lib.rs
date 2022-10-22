@@ -3,7 +3,6 @@
  * 
  * Multiple quadtree implementations for various geometries.
  * 
- * TODO: Convert distance into a result, make missing haversine return a NotImplemented then add failure condition in find/knn
  * TODO: Write documentation for everything (noted as todos in top-level files) and run rustfmt over all files
  * TODO: Add clear and remove operations to the quadtree trait
  * TODO: Add more Haversine implementations for Spherical math

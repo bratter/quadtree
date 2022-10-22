@@ -1,21 +1,17 @@
-use geo::{Rect, Point, GeoNum};
+use geo::{GeoNum, Point, Rect};
 
-use crate::Geometry;
+use crate::{Geometry, Error};
 
 // Module declarations
-pub mod geometry;
 pub mod euclidean;
+pub mod geometry;
 pub mod spherical;
-
-// TODO: Document better/consider: User test points must implement one or both of DistEuclidean or DistSpherical
-//       But would encourage just using geotypes for this where implementations come pre-made if the Datum is also a geotype
-//       There might also be some way to impl for Derefs - see the section in rect.rs and try it out
 
 /// Trait implemented by the geometry wrapper types which provides polymorphism
 /// for distance calculations. The implementors should generally forward the
 /// call to an appropriate underlying distance calculation, for example that
-/// provided by the `EuclideanDistance` trait.
-/// 
+/// provided by the [`geo::EuclideanDistance`] trait.
+///
 /// This trait should not need to be used outside the crate, as the only place
 /// it is necessary is in the wrapper types. However any consumer can implement
 /// custom distance calcs on any type they wish, so is still part of the public
@@ -26,21 +22,21 @@ where
 {
     /// Calculate the distance between an allowed Geometry and the test type
     /// implementing this trait.
-    fn dist_geom(&self, geom: &Geometry<T>) -> T;
+    fn dist_geom(&self, geom: &Geometry<T>) -> Result<T, Error>;
 
-    /// Calculate the distance between a geo::Rect` and the test type
+    /// Calculate the distance between a [`Rect`] and the test type
     /// implementing this trait.
-    fn dist_bbox(&self, bbox: &Rect<T>) -> T;
+    fn dist_bbox(&self, bbox: &Rect<T>) -> Result<T, Error>;
 }
 
-/// Determine whether a `Point` in contained within or sits on the boundary of
-/// a `Rect`.
-/// 
-/// We cannot use Rect::contains for this purpose because the DE-9IM semantics
-/// (https://en.wikipedia.org/wiki/DE-9IM) that geo-rust uses does not return
-/// true when the `Point` site on the boundary of the `Rect`. However this is
-/// still valid for most QuadTree operations.
-/// 
+/// Determine whether a [`Point`] in contained within or sits on the boundary of
+/// a [`Rect`].
+///
+/// We cannot use Rect::contains for this purpose because the
+/// [DE-9IM semantics](https://en.wikipedia.org/wiki/DE-9IM) that geo-rust uses
+/// does not return true when the `Point` site on the boundary of the `Rect`.
+/// However this i still valid for most QuadTree operations.
+///
 /// Note that even 0-sized `Rect` shapes on the boundary of a quadtree will be
 /// contained by another `Rect`, so this is not required for bounds-bounds
 /// calculations.
@@ -57,8 +53,8 @@ where
 
 /// Determine whether the first rectangle `r1` contains or has on its border,
 /// in degenerate cases, `r2`.
-/// 
-/// Currently this mirrors the behavior of contains for rects in geo,-rust, but
+///
+/// Currently this mirrors the behavior of contains for rects in geo-rust, but
 /// this appears to be erroneous behavior, so we will not rely on it here.
 pub fn rect_in_rect<T>(r1: &Rect<T>, r2: &Rect<T>) -> bool
 where

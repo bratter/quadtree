@@ -105,7 +105,7 @@ where
         X: Distance<T>
     {
         // Error early if invalid
-        if cmp.dist_bbox(self.root.bounds()) != T::zero() {
+        if cmp.dist_bbox(self.root.bounds())? != T::zero() {
             return Err(Error::OutOfBounds);
         }
         if self.size == 0 {
@@ -119,7 +119,7 @@ where
         while let Some(node) = stack.pop() {
             // No need to check the children if the bounds are too far,
             // checking bounds is cheaper then checking each child
-            let bounds_dist = cmp.dist_bbox(node.bounds());
+            let bounds_dist = cmp.dist_bbox(node.bounds())?;
             if bounds_dist >= min_dist { continue; }
 
             // Loop through all the children of the current node, retaining
@@ -135,9 +135,9 @@ where
                     .bounding_rect()
                     .ok_or(Error::CannotMakeBbox)?;
 
-                if cmp.dist_bbox(&bbox) > min_dist { continue; }
+                if cmp.dist_bbox(&bbox)? > min_dist { continue; }
 
-                let child_dist = cmp.dist_geom(&child.geometry());
+                let child_dist = cmp.dist_geom(&child.geometry())?;
                 // See notes in point about <= usage
                 if child_dist <= min_dist {
                     min_dist = child_dist;
