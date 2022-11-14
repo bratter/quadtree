@@ -173,8 +173,6 @@ fn euclidean_point_example() {
 
 #[test]
 fn spherical_point_example() {
-    // TODO: Build out this example
-
     // CRITICAL NOTE: While it is irrelevant for insert/retrieve, all search
     // calcs both take and return all corrdinates in radians, not degrees!!
     // All supported geo-types provide a to_radians and a to_radians_in_place
@@ -213,5 +211,5 @@ fn spherical_point_example() {
     assert_eq!(res, &data[2]);
     assert_abs_diff_eq!(d, std::f64::consts::FRAC_PI_8);
 
-    println!("{}", qt);
+    // TODO: Build out this example further
 }

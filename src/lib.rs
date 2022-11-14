@@ -3,7 +3,6 @@
  *
  * Multiple quadtree implementations for various geometries.
  *
- * TODO: Write documentation for everything (noted as todos in top-level files) and run rustfmt over all files
  * TODO: Add clear and remove operations to the quadtree trait
  * TODO: Add more Haversine implementations for Spherical math
  * TODO: Build an integer-with-power-2-bounds version?

@@ -1,4 +1,4 @@
-use geo::{coord, GeoFloat, Line, Point, Rect};
+use geo::{coord, GeoFloat, Line, Point, Rect, LineString};
 use std::f64::consts::PI;
 use std::ops::{Add, Sub};
 
@@ -80,7 +80,7 @@ where
 
 /// Calculate the great circle distance between two [`Point`]'s using the
 /// Haversine formula.
-/// 
+///
 /// Inputs and outputs are in radians. Convert radians to a linear distance by
 /// multiplying by the sphere's radius.
 pub fn dist_pt_pt<T>(p1: &Point<T>, p2: &Point<T>) -> T
@@ -100,10 +100,10 @@ where
 
 /// Calculate the great circle distance between a [`Point`] and a [`Line`]
 /// using the Haversine formula.
-/// 
+///
 /// Inputs and outputs are in radians. Convert radians to a linear distance by
 /// multiplying by the sphere's radius.
-/// 
+///
 /// Adapted from [TurfJS](https://github.com/Turfjs/turf/blob/master/packages/turf-point-to-line-distance/index.ts).
 pub fn dist_pt_line<T>(pt: &Point<T>, line: &Line<T>) -> T
 where
@@ -141,9 +141,32 @@ where
     }
 }
 
+/// Calculate the great circle distance between a [`Point`] and a [`LineString`]
+/// using the HAversine formula.
+/// 
+/// Iterates through each segment in the [`LineString`] to find the closest.
+/// 
+/// Inputs and outputs are in radians. Convert radians to a linear distance by
+/// multiplying by the sphere's radius.
+pub fn dist_pt_linestring<T>(pt: &Point<T>, linestring: &LineString<T>) -> T
+where
+    T: GeoFloat,
+{
+    let mut min_dist = T::infinity();
+
+    for segment in linestring.lines() {
+        let d = dist_pt_line(pt, &segment);
+        if d < min_dist {
+            min_dist = d;
+        }
+    }
+
+    min_dist
+}
+
 /// Calculate the great circle distance between a [`Point`] and a [`Rect`]
 /// using the Haversine formula.
-/// 
+///
 /// Inputs and outputs are in radians. Convert radians to a linear distance by
 /// multiplying by the sphere's radius.
 pub fn dist_pt_rect<T>(pt: &Point<T>, rect: &Rect<T>) -> T
@@ -187,10 +210,10 @@ where
 
 /// Calculate the great circle distance between two [`Rect`]'s using the
 /// Haversine formula.
-/// 
+///
 /// Inputs and outputs are in radians. Convert radians to a linear distance by
 /// multiplying by the sphere's radius.
-/// 
+///
 /// Note that the antimeridian is a problem that is not easy to solve, see:
 /// https://macwright.com/2016/09/26/the-180th-meridian.html. All calcs
 /// in this module assume that no shape can cross 180 deg lng. Everything

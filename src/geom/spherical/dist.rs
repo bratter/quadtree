@@ -1,15 +1,15 @@
 use crate::{Error, Geometry};
 use geo::{GeoFloat, Line, LineString, Point, Polygon, Rect};
 
-use super::math::{dist_pt_line, dist_pt_pt, dist_pt_rect, dist_rect_rect};
+use super::math::*;
 
-/// Trait applied to all valida geometries to calculate the Haversine distance
+/// Trait applied to all valid geometries to calculate the Haversine distance
 /// between geometries.
-/// 
+///
 /// The trait is implemented for all [`Geometry`] geometries, and the enum
 /// itself, but may produce an error if the Haversine distance cannot be
 /// calculated.
-/// 
+///
 /// This trait should not need to be used outside the crate as it is abstracted
 /// through the [`crate::Distance`] trait using the [`crate::Spherical`] type.
 pub trait DistHaversine<T, Rhs = Self> {
@@ -24,7 +24,7 @@ where
         match rhs {
             Geometry::Point(d) => Ok(dist_pt_pt(self, d)),
             Geometry::Line(d) => Ok(dist_pt_line(self, d)),
-            Geometry::LineString(_) => Err(Error::InvalidDistance),
+            Geometry::LineString(d) => Ok(dist_pt_linestring(self, d)),
             Geometry::Polygon(_) => Err(Error::InvalidDistance),
             Geometry::Rect(d) => Ok(dist_pt_rect(self, d)),
         }
