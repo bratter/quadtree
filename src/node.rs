@@ -95,9 +95,10 @@ where
     /// retrieve operation if required.
     fn find_sub_node(&self, datum: &D) -> Option<SubNode> {
         let (x, y) = Self::datum_position(datum)?.x_y();
+        let b = self.bounds();
         let two = T::one() + T::one();
-        let left = x <= self.bounds().width() / two;
-        let top = y <= self.bounds().height() / two;
+        let left = x <= b.min().x + b.width() / two;
+        let top = y <= b.min().y + b.height() / two;
 
         let sn = if left && top {
             SubNode::TopLeft
