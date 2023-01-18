@@ -1,4 +1,4 @@
-use geo::{coord, GeoFloat, Line, Point, Rect, LineString};
+use geo::{coord, GeoFloat, Intersects, Line, LineString, Point, Polygon, Rect};
 use std::f64::consts::PI;
 use std::ops::{Add, Sub};
 
@@ -143,9 +143,9 @@ where
 
 /// Calculate the great circle distance between a [`Point`] and a [`LineString`]
 /// using the HAversine formula.
-/// 
+///
 /// Iterates through each segment in the [`LineString`] to find the closest.
-/// 
+///
 /// Inputs and outputs are in radians. Convert radians to a linear distance by
 /// multiplying by the sphere's radius.
 pub fn dist_pt_linestring<T>(pt: &Point<T>, linestring: &LineString<T>) -> T
@@ -290,6 +290,29 @@ where
     }
 }
 
+/// Calculate the great circle distance between a [`Point`] and an arbitrary [`Polygon`] using the
+/// Haversine formula.
+///
+/// Inputs and outputs are in radians. Convert radians to a linear distance by
+/// multiplying by the sphere's radius.
+pub fn dist_pt_poly<T>(pt: &Point<T>, poly: &Polygon<T>) -> T
+where
+    T: GeoFloat,
+{
+    // Distance is 0 if it intersects anywhere in the polygon
+    // Otherwise find the ring with the smallest distance, inside or out
+    if poly.intersects(pt) {
+        T::zero()
+    } else {
+        let mut dist = dist_pt_linestring(pt, poly.exterior());
+        for ring in poly.interiors() {
+            dist = dist.min(dist_pt_linestring(pt, ring));
+        }
+
+        dist
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use approx::assert_abs_diff_eq;
@@ -403,5 +426,56 @@ mod tests {
         let b2 = Rect::new(p!(-2.8, -0.4), p!(-2.7, -0.2));
         let d = dist_pt_pt(&p!(3.0, 0.0), &p!(-2.8, 0.2));
         assert_abs_diff_eq!(dist_rect_rect(&b1, &b2), d);
+    }
+
+    fn test_poly() -> Polygon {
+        Polygon::new(
+            LineString::from(vec![(0.0, 0.0), (0.0, 0.6), (0.6, 0.6), (0.6, 0.0)]),
+            vec![LineString::from(vec![
+                (0.2, 0.2),
+                (0.2, 0.4),
+                (0.4, 0.4),
+                (0.4, 0.2),
+            ])],
+        )
+    }
+
+    #[test]
+    fn dist_pt_poly_is_zero_when_inside_and_on_boundaries() {
+        let p1 = Point::new(0.1, 0.1);
+        let p2 = Point::new(0.1, 0.0);
+
+        let poly = test_poly();
+
+        assert_eq!(0.0, dist_pt_poly(&p1, &poly));
+        assert_eq!(0.0, dist_pt_poly(&p2, &poly));
+    }
+
+    #[test]
+    fn dist_pt_poly_is_exterior_distance_when_outside() {
+        let pt = Point::new(0.7, 0.1);
+        let poly = test_poly();
+
+        // The line to test
+        let line = Line::from([(0.6, 0.6), (0.6, 0.0)]);
+
+        let dist = dist_pt_poly(&pt, &poly);
+        let test = dist_pt_line(&pt, &line);
+        println!("{}", dist);
+        assert_abs_diff_eq!(dist, test);
+    }
+
+    #[test]
+    fn dist_pt_poly_is_interior_when_inside_inner_ring() {
+        let pt = Point::new(0.25, 0.3);
+        let poly = test_poly();
+
+        // The line to test
+        let line = Line::from([(0.2, 0.2), (0.2, 0.4)]);
+
+        let dist = dist_pt_poly(&pt, &poly);
+        let test = dist_pt_line(&pt, &line);
+        println!("{}", dist);
+        assert_abs_diff_eq!(dist, test);
     }
 }

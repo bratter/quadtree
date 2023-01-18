@@ -25,7 +25,7 @@ where
             Geometry::Point(d) => Ok(dist_pt_pt(self, d)),
             Geometry::Line(d) => Ok(dist_pt_line(self, d)),
             Geometry::LineString(d) => Ok(dist_pt_linestring(self, d)),
-            Geometry::Polygon(_) => Err(Error::InvalidDistance),
+            Geometry::Polygon(d) => Ok(dist_pt_poly(self, d)),
             Geometry::Rect(d) => Ok(dist_pt_rect(self, d)),
         }
     }
@@ -67,7 +67,7 @@ where
 {
     fn dist_haversine(&self, rhs: &Geometry<T>) -> Result<T, Error> {
         match rhs {
-            Geometry::Point(_) => Err(Error::InvalidDistance),
+            Geometry::Point(p) => Ok(dist_pt_poly(p, self)),
             Geometry::Line(_) => Err(Error::InvalidDistance),
             Geometry::LineString(_) => Err(Error::InvalidDistance),
             Geometry::Polygon(_) => Err(Error::InvalidDistance),
