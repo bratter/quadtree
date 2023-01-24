@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
-use geo::{coord, Coordinate, GeoNum, Rect};
+use geo::{coord, Coord, GeoNum, Rect};
 
 use crate::iter::{DatumIter, DescendantIter};
 use crate::Error;
@@ -42,7 +42,7 @@ where
 
     /// Get a single [`Coordinate`] position of the datum in a manner suitable
     /// for the constraints of the implementation.
-    fn datum_position(datum: &D) -> Option<Coordinate<T>>;
+    fn datum_position(datum: &D) -> Option<Coord<T>>;
 
     /// Get the bounding rect for the Node.
     fn bounds(&self) -> &Rect<T>;

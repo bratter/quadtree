@@ -3,7 +3,7 @@ mod node;
 use super::knn::knn;
 use super::sorted::{sorted, SortIter};
 use crate::*;
-use geo::{Coordinate, GeoNum, Point, Rect};
+use geo::{Coord, GeoNum, Point, Rect};
 use node::PointNode;
 
 /// Trait required for an item to be useable in a [`crate::PointQuadTree`].
@@ -26,7 +26,7 @@ where
 }
 
 // We turn a Point into a datum so it can be used in the qt directly
-impl<T> AsPoint<T> for Coordinate<T>
+impl<T> AsPoint<T> for Coord<T>
 where
     T: GeoNum,
 {

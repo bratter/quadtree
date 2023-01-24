@@ -1,6 +1,4 @@
-use geo::{
-    Coordinate, GeoFloat, Line, LineString, MapCoords, MapCoordsInPlace, Point, Polygon, Rect,
-};
+use geo::{Coord, GeoFloat, Line, LineString, MapCoords, MapCoordsInPlace, Point, Polygon, Rect};
 
 use crate::Geometry;
 
@@ -37,11 +35,11 @@ where
     fn to_radians_in_place(&mut self);
 }
 
-fn coord_to_radians<T>(c: Coordinate<T>) -> Coordinate<T>
+fn coord_to_radians<T>(c: Coord<T>) -> Coord<T>
 where
     T: GeoFloat,
 {
-    Coordinate {
+    Coord {
         x: c.x.to_radians(),
         y: c.y.to_radians(),
     }

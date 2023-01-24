@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
 use crate::*;
-use geo::{BoundingRect, Coordinate, GeoNum, Intersects, Rect};
+use geo::{BoundingRect, Coord, GeoNum, Intersects, Rect};
 
 /// [`Node`] implementation for [`BoundsQuadTree`].
 #[derive(Debug)]
@@ -39,12 +39,12 @@ where
         }
     }
 
-    fn datum_position(datum: &D) -> Option<Coordinate<T>> {
+    fn datum_position(datum: &D) -> Option<Coord<T>> {
         let bbox = datum.as_geom().bounding_rect()?;
         let (x, y) = bbox.min().x_y();
         let two = T::one() + T::one();
 
-        Some(Coordinate {
+        Some(Coord {
             x: x + bbox.width() / two,
             y: y + bbox.height() / two,
         })

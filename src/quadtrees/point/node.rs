@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
 use crate::*;
-use geo::{Coordinate, GeoNum, Rect};
+use geo::{Coord, GeoNum, Rect};
 
 /// [`Node`] implementation for [`PointQuadTree`].
 #[derive(Debug)]
@@ -37,7 +37,7 @@ where
         }
     }
 
-    fn datum_position(datum: &D) -> Option<Coordinate<T>> {
+    fn datum_position(datum: &D) -> Option<Coord<T>> {
         Some(datum.as_point().0)
     }
 
