@@ -1,12 +1,12 @@
 mod datum;
 mod node;
 
+pub use self::datum::PointDatum;
+
 use super::knn::knn;
 use super::sorted::{sorted, SortIter};
 use crate::*;
-pub use datum::*;
-use geo::{GeoFloat, GeoNum, Rect};
-use geom::Distance;
+use geo::{GeoNum, Rect};
 use node::PointNode;
 
 /// A [`QuadTree`] implementation for point-like geometries.
@@ -19,6 +19,9 @@ use node::PointNode;
 ///
 /// Users can implement [`PointDatum`] on any custom type they wish to use as
 /// a datum.
+///
+/// Note that [`AsGeom`] is also required on datum in order to access the [`QuadTreeSearch`]
+/// functionality per the trait bound.
 #[derive(Debug)]
 pub struct PointQuadTree<D, T>
 where
@@ -30,6 +33,8 @@ where
     // Maintain a count for size
     // Could calculate this each time, but it only saves usize memory
     size: usize,
+
+    calc_method: CalcMethod,
 }
 
 impl<D, T> PointQuadTree<D, T>
@@ -38,24 +43,35 @@ where
     T: GeoNum,
 {
     /// Create a new Point QuadTree.
-    pub fn new(bounds: Rect<T>, max_depth: u8, max_children: usize) -> Self {
-        PointQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
+    pub fn new(
+        bounds: Rect<T>,
+        calc_method: CalcMethod,
+        max_depth: u8,
+        max_children: usize,
+    ) -> Self {
+        PointQuadTree::private_new(bounds, calc_method, Some(max_depth), Some(max_children))
     }
 
     /// Create a new Point QuadTree using default values for max_depth and
     /// max_children.
-    pub fn from_bounds(bounds: Rect<T>) -> Self {
-        PointQuadTree::private_new(bounds, None, None)
+    pub fn from_bounds(bounds: Rect<T>, calc_method: CalcMethod) -> Self {
+        PointQuadTree::private_new(bounds, calc_method, None, None)
     }
 
     // Private constructor
-    fn private_new(bounds: Rect<T>, max_depth: Option<u8>, max_children: Option<usize>) -> Self {
+    fn private_new(
+        bounds: Rect<T>,
+        calc_method: CalcMethod,
+        max_depth: Option<u8>,
+        max_children: Option<usize>,
+    ) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
         let max_children = max_children.unwrap_or(DEFAULT_MAX_CHILDREN);
 
         Self {
             root: PointNode::new(bounds, 0, max_depth, max_children),
             size: 0,
+            calc_method,
         }
     }
 }
@@ -96,15 +112,22 @@ where
 
 impl<D, T> QuadTreeSearch<D, T> for PointQuadTree<D, T>
 where
-    D: Datum<T> + PointDatum<T>,
-    T: GeoFloat,
+    D: AsGeom<T> + PointDatum<T>,
+    T: QtFloat,
 {
     type Node = PointNode<D, T>;
 
+    fn calc_method(&self) -> CalcMethod {
+        self.calc_method
+    }
+
     fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error>
     where
-        X: Distance<T>,
+        X: AsGeom<T>,
     {
+        // Convert the comparison geometry to something we can work with internally
+        let cmp = cmp.with_calc(self.calc_method());
+
         // Error early if invalid
         if cmp.dist_bbox(self.root.bounds())? != T::zero() {
             return Err(Error::OutOfBounds);
@@ -129,7 +152,7 @@ where
             // Loop through all the children of the current node, retaining
             // only the currently closest child
             for child in node.children() {
-                let child_dist = cmp.dist_geom(&child.geometry())?;
+                let child_dist = cmp.dist_geom(&child.as_geom())?;
                 // Using <= here so points at a distance equal to r will be
                 // returned, but this also slightly changes which Datum will
                 // be returned if they are equal distances away. This is fine
@@ -153,16 +176,16 @@ where
 
     fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Result<Vec<(&D, T)>, Error>
     where
-        X: Distance<T>,
+        X: AsGeom<T>,
     {
-        knn(&self.root, cmp, k, r)
+        knn(&self.root, cmp.with_calc(self.calc_method()), k, r)
     }
 
-    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, Self::Node, D, X, T>
+    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, Self::Node, D, T>
     where
-        X: Distance<T>,
+        X: AsGeom<T> + 'a,
     {
-        sorted(&self.root, cmp)
+        sorted(&self.root, cmp.with_calc(self.calc_method()))
     }
 }
 
@@ -210,7 +233,7 @@ mod tests {
     fn subdivide_occurs_at_max_children() {
         let origin: Point = Point::new(0.0, 0.0);
         let bounds = Rect::new(origin.0, coord!(x: 1.0, y: 1.0));
-        let mut qt = PointQuadTree::from_bounds(bounds);
+        let mut qt = PointQuadTree::from_bounds(bounds, CalcMethod::Euclidean);
 
         // Using a data wrapper here
         let pt1 = MyData(0.1, 0.1);
@@ -256,7 +279,12 @@ mod tests {
     #[test]
     fn can_change_max_depth_and_max_children_and_subdivide_stops_at_max_depth() {
         let origin: Point = Point::new(0.0, 0.0);
-        let mut qt = PointQuadTree::new(Rect::new(origin.0, coord! { x: 1.0, y: 1.0 }), 2, 2);
+        let mut qt = PointQuadTree::new(
+            Rect::new(origin.0, coord! { x: 1.0, y: 1.0 }),
+            CalcMethod::Euclidean,
+            2,
+            2,
+        );
 
         let pt1 = MyData(0.1, 0.1);
 

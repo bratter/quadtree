@@ -27,6 +27,7 @@ fn euclidean_point_example() {
         meta: (), // Some important data in practice
         location: Point,
     }
+
     impl PointDatum for MyDatum {
         fn point(&self) -> Point<f64> {
             self.location
@@ -44,7 +45,7 @@ fn euclidean_point_example() {
 
     // Construct a point qt in some bounds
     let bounds = r(0.0, 0.0, 32.0, 32.0);
-    let mut qt = PointQuadTree::from_bounds(bounds);
+    let mut qt = PointQuadTree::from_bounds(bounds, CalcMethod::Euclidean);
 
     let data = vec![
         datum(0, 0.0, 0.0),
@@ -105,37 +106,35 @@ fn euclidean_point_example() {
     // retrieval don't require access to the entire geometry, but now we do
     // to use find and knn.
     //
-    // To return a Geometry, we have to wrap the reified type in the right
+    // To return a GeometryRef, we have to wrap the reified type in the right
     // Geometry enum to get proper polymorphism.
-    impl Datum for MyDatum {
-        fn geometry(&self) -> Geometry<f64> {
-            Geometry::Point(self.location)
+    impl AsGeom<f64> for MyDatum {
+        fn as_geom(&self) -> GeometryRef<f64> {
+            GeometryRef::Point(&self.location)
         }
     }
 
-    // For the comparison item we can use anything that implements Datum, does
-    // not have to be the same as the Datum used in the QuadTree. Datum comes
+    // For the comparison item we can use anything that implements AsGeom, does
+    // not have to be the same as the datum used in the QuadTree. AsGeom comes
     // pre-implemented for standard geo-types, so Point, Line, etc. can be
     // dropped in directly.
     //
-    // Note that we have to wrap the test item, whatever it is, in eucl to give
-    // it polymorphic access to the correct distance formulas. It is possible
-    // to implement Distance<T> on the type, but this only works if you will
-    // definitely only use one geometry.
-    let cmp = eucl(p(0.0, 0.0));
+    // Note that the distance formula used depends on the CalcMethod passed when constructing the
+    // quadtree.
+    let cmp = p(0.0, 0.0);
     let (res, d) = qt.find(&cmp).unwrap();
     assert_eq!(res, &data[0]);
     assert_abs_diff_eq!(d, 0.0);
 
     // We can of course drop a datum in directly
-    let cmp = eucl(data[1].clone());
+    let cmp = data[1].clone();
     let (res, d) = qt.find(&cmp).unwrap();
     assert_eq!(res, &data[1]);
     assert_abs_diff_eq!(d, 0.0);
 
-    // Using the eucl() wrapper function (or Euclidean::new) does distance
-    // comparisons using Euclidean math
-    let cmp = Euclidean::new(p(12.0, 14.0));
+    // This quadtree was constructed to use Euclidean math with CalcMethod::Euclidean in the new
+    // method above
+    let cmp = p(12.0, 14.0);
     let (res, d) = qt.find(&cmp).unwrap();
     assert_eq!(res, &data[5]);
     assert_abs_diff_eq!(d, 2.0_f64.sqrt());
@@ -148,7 +147,7 @@ fn euclidean_point_example() {
     // Knn/knn_r work the same way as find/find_r, but returns a vector of
     // results that is up to `k` in length
     // TODO: Is there some way to work better with references here
-    let cmp = eucl(p(0.0, 0.0));
+    let cmp = p(0.0, 0.0);
     let res: Vec<MyDatum> = qt
         .knn(&cmp, 3)
         .unwrap()
@@ -158,7 +157,7 @@ fn euclidean_point_example() {
     assert_eq!(res, vec![data[0].clone(), data[4].clone(), data[8].clone()]);
 
     // Returns an empty vec if nothing is found in the radius
-    let cmp = eucl(p(14.0, 14.0));
+    let cmp = p(14.0, 14.0);
     let res = qt.knn_r(&cmp, 3, 0.5).unwrap();
     assert_eq!(res, vec![]);
 
@@ -166,7 +165,7 @@ fn euclidean_point_example() {
     // has more forgiving semantics than find/knn - it will skip errors rather
     // than returning `Err`. Here we just sort everything from the farthest
     // corner, and for ease, map the data to just the id
-    let cmp = eucl(p(32.0, 32.0));
+    let cmp = p(32.0, 32.0);
     let res = qt.sorted(&cmp).map(|d| d.0.id);
     assert_eq!(res.collect::<Vec<_>>(), vec![5, 6, 7, 2, 3, 1, 8, 4, 0]);
 }
@@ -180,9 +179,9 @@ fn spherical_point_example() {
 
     // Setup for Spherical works exactly the same way
     // Here we will just drop Points in as the Datum, noting that Point
-    // already implements Datum and PointDatum
+    // already implements AsGeom and PointDatum
     let bounds = r(0.0, 0.0, 90.0, 90.0).to_radians();
-    let mut qt = PointQuadTree::new(bounds, 4, 2);
+    let mut qt = PointQuadTree::new(bounds, CalcMethod::Spherical, 4, 2);
 
     let data = vec![
         p(0.0, 0.0).to_radians(),
@@ -196,17 +195,16 @@ fn spherical_point_example() {
         qt.insert(d.clone()).unwrap();
     }
 
-    // Here we wrap our comparisons in Spherical instead of Euclidean
-    // Moving around y == 0 (the "equator") is simply the difference
-    // in radians
-    let cmp = sphere(p(22.5, 0.0).to_radians());
+    // Here we use the spherical calculations dropped into the quadtree's new method
+    // Moving around y == 0 (the "equator") is simply the difference in radians
+    let cmp = p(22.5, 0.0).to_radians();
     let (res, d) = qt.find(&cmp).unwrap();
     assert_eq!(res, &data[0]);
     assert_abs_diff_eq!(d, std::f64::consts::FRAC_PI_8);
 
     // ...and same with anything on the same lng line
     // Note the radian conversions in both
-    let cmp = sphere(p(45.0, 67.5).to_radians());
+    let cmp = p(45.0, 67.5).to_radians();
     let (res, d) = qt.find(&cmp).unwrap();
     assert_eq!(res, &data[2]);
     assert_abs_diff_eq!(d, std::f64::consts::FRAC_PI_8);

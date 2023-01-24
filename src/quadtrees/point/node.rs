@@ -4,6 +4,8 @@ use std::marker::PhantomData;
 use crate::*;
 use geo::{Coordinate, GeoNum, Rect};
 
+use super::datum::PointDatum;
+
 /// [`Node`] implementation for [`PointQuadTree`].
 #[derive(Debug)]
 pub struct PointNode<D, T>

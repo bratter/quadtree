@@ -1,9 +1,79 @@
 use geo::{BoundingRect, GeoNum, Line, LineString, Point, Polygon, Rect};
 
-/// Enum to capture the geo-types that can be used as Datums.
+use super::{AsGeom, CalcMethod, GeomCalc};
+
+//
+// -------------------- GeometryRef (borrowed data)  -------------------- //
+//
+
+/// Enum to capture borrowed geo-types that can be used in QuadTrees. This is the destiniation type
+/// for as_geom and therefore can be used directly as data, and is also the type that must be
+/// returned from implementations of [`AsGeom`] on custome datum types.
+///
+/// We provide wrappers for [`Point`], [`Line`], [`LineString`], [`Polygon`], and [`Rect`]. This
+/// wrapper implements [`AsGeom`] so it can be used directly  in QuadTrees, and also uses owned
+/// data, enabling radians coversion.
+///
+/// Because this wraps borrowed data, neither [`From`] or [`ToRadians`] is implemented. If these
+/// are required, the operations should be performed on the individual geometries or [`Geometry`]
+/// prior to conversion.
+#[derive(Debug, Clone, Copy)]
+pub enum GeometryRef<'a, T>
+where
+    T: GeoNum,
+{
+    Point(&'a Point<T>),
+    Line(&'a Line<T>),
+    LineString(&'a LineString<T>),
+    Polygon(&'a Polygon<T>),
+    Rect(&'a Rect<T>),
+}
+
+// Implement AsGeom and return self so it can be used in a QuadTree directly.
+impl<T> AsGeom<T> for GeometryRef<'_, T>
+where
+    T: GeoNum,
+{
+    fn as_geom(&self) -> GeometryRef<T> {
+        *self
+    }
+}
+
+impl<'a, T> GeometryRef<'a, T>
+where
+    T: GeoNum,
+{
+    pub fn into_calc(self, method: CalcMethod) -> GeomCalc<'a, T> {
+        GeomCalc { geom: self, method }
+    }
+}
+
+impl<T> BoundingRect<T> for GeometryRef<'_, T>
+where
+    T: GeoNum,
+{
+    type Output = Option<Rect<T>>;
+
+    fn bounding_rect(&self) -> Self::Output {
+        match self {
+            GeometryRef::Point(d) => Some(d.bounding_rect()),
+            GeometryRef::Line(d) => Some(d.bounding_rect()),
+            GeometryRef::LineString(d) => d.bounding_rect(),
+            GeometryRef::Polygon(d) => d.bounding_rect(),
+            GeometryRef::Rect(d) => Some(d.bounding_rect()),
+        }
+    }
+}
+
+//
+// -------------------- Geometry (owned data)  -------------------- //
+//
+
+/// Enum to capture owned geo-types that can be used in QuadTrees.
 ///
 /// We provide wrappers for [`Point`], [`Line`], [`LineString`], [`Polygon`],
-/// and [`Rect`].
+/// and [`Rect`]. This wrapper implements [`AsGeom`] so it can be used directly
+/// in QuadTrees, and also uses owned data, enabling radians coversion.
 ///
 /// [`From`] is implemented on Geometry for each of these geo-types to ease
 /// creation.
@@ -19,6 +89,22 @@ where
     Rect(Rect<T>),
 }
 
+// Ensure we can convert an owned geometry into a reference.
+impl<T> AsGeom<T> for Geometry<T>
+where
+    T: GeoNum,
+{
+    fn as_geom(&self) -> GeometryRef<T> {
+        match self {
+            Self::Point(d) => GeometryRef::Point(d),
+            Self::Line(d) => GeometryRef::Line(d),
+            Self::LineString(d) => GeometryRef::LineString(d),
+            Self::Polygon(d) => GeometryRef::Polygon(d),
+            Self::Rect(d) => GeometryRef::Rect(d),
+        }
+    }
+}
+
 impl<T> BoundingRect<T> for Geometry<T>
 where
     T: GeoNum,
@@ -26,13 +112,7 @@ where
     type Output = Option<Rect<T>>;
 
     fn bounding_rect(&self) -> Self::Output {
-        match self {
-            Geometry::Point(d) => Some(d.bounding_rect()),
-            Geometry::Line(d) => Some(d.bounding_rect()),
-            Geometry::LineString(d) => d.bounding_rect(),
-            Geometry::Polygon(d) => d.bounding_rect(),
-            Geometry::Rect(d) => Some(d.bounding_rect()),
-        }
+        self.as_geom().bounding_rect()
     }
 }
 

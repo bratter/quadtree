@@ -3,6 +3,7 @@
  *
  * Multiple quadtree implementations for various geometries.
  *
+ * TODO: More permutations of the DistHaversine and DistEuclidean traits, consider a macro helper
  * TODO: Add clear and remove operations to the quadtree trait
  * TODO: Add more Haversine implementations for Spherical math
  * TODO: Build an integer-with-power-2-bounds version?
@@ -36,3 +37,4 @@ pub use geom::geometry::*;
 pub use geom::spherical;
 pub use geom::spherical::to_radians::*;
 pub use geom::spherical::*;
+pub use geom::*;

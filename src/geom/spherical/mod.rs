@@ -1,12 +1,4 @@
-use crate::{Datum, Distance, Error, Geometry};
-use core::ops::Deref;
-pub use dist::DistHaversine;
-use geo::{GeoFloat, GeoNum, Rect};
-use num_traits::FromPrimitive;
-use std::marker::PhantomData;
-
-mod dist;
-
+pub mod dist;
 pub mod math;
 pub mod to_radians;
 
@@ -19,68 +11,3 @@ pub mod to_radians;
 /// https://en.wikipedia.org/wiki/Earth_radius#Mean_radius
 /// Extracted as-is from geo-rust source
 pub const MEAN_EARTH_RADIUS: f64 = 6371008.8;
-
-/// Convenience function to wrap a test item with a Spherical geometry wrapper.
-///
-/// Any test item `X` that implements [`Datum`] can be used in the wrapper, and
-/// the wrapper must be used to calculate Haversine distances in any of the
-/// [`crate::QuadTreeSearch`] methods.
-pub fn sphere<X, T>(test: X) -> Spherical<X, T>
-where
-    X: Datum<T>,
-    T: GeoNum,
-{
-    Spherical(test, PhantomData)
-}
-
-/// Geometry wrapper type that implements Haversine distance formulas.
-///
-/// Any test item `X` that implements [`Datum`] can be used in the wrapper, and
-/// the wrapper must be used to calculate Haversine distances in any of the
-/// [`crate::QuadTreeSearch`] methods.
-#[derive(Debug)]
-pub struct Spherical<X, T>(X, PhantomData<T>)
-where
-    X: Datum<T>,
-    T: GeoNum;
-
-impl<X, T> Spherical<X, T>
-where
-    X: Datum<T>,
-    T: GeoNum,
-{
-    /// Wrap a `Test` item with a Spherical geometry wrapper.
-    pub fn new(t: X) -> Self {
-        Self(t, PhantomData)
-    }
-}
-
-impl<X, T> Distance<T> for Spherical<X, T>
-where
-    X: Datum<T>,
-    T: GeoFloat + FromPrimitive,
-{
-    fn dist_geom(&self, geom: &Geometry<T>) -> Result<T, Error> {
-        let test_geom = self.0.geometry();
-
-        test_geom.dist_haversine(&geom)
-    }
-
-    fn dist_bbox(&self, bbox: &Rect<T>) -> Result<T, Error> {
-        let test_geom = self.0.geometry();
-
-        bbox.dist_haversine(&test_geom)
-    }
-}
-
-impl<X, T> Deref for Spherical<X, T>
-where
-    X: Datum<T>,
-    T: GeoNum,
-{
-    type Target = X;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}

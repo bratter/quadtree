@@ -1,6 +1,6 @@
 mod node;
 
-use geo::{BoundingRect, GeoFloat, GeoNum, Rect};
+use geo::{BoundingRect, GeoNum, Rect};
 use std::vec;
 
 use super::{
@@ -8,60 +8,71 @@ use super::{
     sorted::{sorted, SortIter},
 };
 use crate::*;
-pub use datum::*;
 use node::*;
 
 /// A [`QuadTree`] implementation for bounded items (i.e. those with a finite
 /// width and/or height).
-/// 
-/// This implementation requires the datum to simply be a [`Datum`], which
-/// enables the conversion of the datum to a [`Geometry`] - an enum that wraps
+///
+/// This implementation requires the datum to simply be a [`AsGeom`], which
+/// enables the conversion of the datum to a [`GeometryRef`] - an enum that wraps
 /// valid underlying geo-types. Datum comes pre-implemented for all valid
 /// geo-types.
-/// 
-/// Users can implement [`PointDatum`] on any custom type they wish to use as
-/// a datum. See more detailed instructions in the [`PointDatum`] docs.
+///
+/// Users can implement [`AsGeom`] on any custom type they wish to use as
+/// a datum.
 #[derive(Debug)]
 pub struct BoundsQuadTree<D, T>
 where
-    D: Datum<T>,
+    D: AsGeom<T>,
     T: GeoNum,
 {
     root: BoundsNode<D, T>,
     size: usize,
+    calc_method: CalcMethod,
 }
 
 impl<D, T> BoundsQuadTree<D, T>
 where
-    D: Datum<T>,
+    D: AsGeom<T>,
     T: GeoNum,
 {
     /// Create a new Bounds QuadTree.
-    pub fn new(bounds: Rect<T>, max_depth: u8, max_children: usize) -> Self {
-        BoundsQuadTree::private_new(bounds, Some(max_depth), Some(max_children))
+    pub fn new(
+        bounds: Rect<T>,
+        calc_method: CalcMethod,
+        max_depth: u8,
+        max_children: usize,
+    ) -> Self {
+        BoundsQuadTree::private_new(bounds, calc_method, Some(max_depth), Some(max_children))
     }
 
     /// Create a new Bounds QuadTree using default values for max_depth and
     /// max_children.
-    pub fn from_bounds(bounds: Rect<T>) -> Self {
-        BoundsQuadTree::private_new(bounds, None, None)
+    pub fn from_bounds(bounds: Rect<T>, calc_method: CalcMethod) -> Self {
+        BoundsQuadTree::private_new(bounds, calc_method, None, None)
     }
 
     // Private constructor
-    fn private_new(bounds: Rect<T>, max_depth: Option<u8>, max_children: Option<usize>) -> Self {
+    fn private_new(
+        bounds: Rect<T>,
+        calc_method: CalcMethod,
+        max_depth: Option<u8>,
+        max_children: Option<usize>,
+    ) -> Self {
         let max_depth = max_depth.unwrap_or(DEFAULT_MAX_DEPTH);
         let max_children = max_children.unwrap_or(DEFAULT_MAX_CHILDREN);
 
         Self {
             root: BoundsNode::new(bounds, 0, max_depth, max_children),
             size: 0,
+            calc_method,
         }
     }
 }
 
 impl<D, T> QuadTree<D, T> for BoundsQuadTree<D, T>
 where
-    D: Datum<T>,
+    D: AsGeom<T>,
     T: GeoNum,
 {
     type Node = BoundsNode<D, T>;
@@ -74,7 +85,7 @@ where
         // Bounds check - discard nodes that are not completely contained
         let qb = self.root.bounds();
         let db = &datum
-            .geometry()
+            .as_geom()
             .bounding_rect()
             .ok_or(Error::CannotMakeBbox)?;
 
@@ -90,7 +101,7 @@ where
 
     fn retrieve(&self, datum: &D) -> DatumIter<'_, Self::Node, D, T> {
         // Squash errors and return an empty iterator if we can't get the bbox
-        if let Some(bbox) = datum.geometry().bounding_rect() {
+        if let Some(bbox) = datum.as_geom().bounding_rect() {
             // Cannot use Rect::contains here, see notes on rect_in_rect for why
             if rect_in_rect(self.root.bounds(), &bbox) {
                 self.root.retrieve(datum)
@@ -105,15 +116,22 @@ where
 
 impl<D, T> QuadTreeSearch<D, T> for BoundsQuadTree<D, T>
 where
-    D: Datum<T>,
-    T: GeoFloat,
+    D: AsGeom<T>,
+    T: QtFloat,
 {
     type Node = BoundsNode<D, T>;
 
+    fn calc_method(&self) -> CalcMethod {
+        self.calc_method
+    }
+
     fn find_r<X>(&self, cmp: &X, r: T) -> Result<(&D, T), Error>
     where
-        X: Distance<T>,
+        X: AsGeom<T>,
     {
+        // Convert to calculable form
+        let cmp = cmp.with_calc(self.calc_method());
+
         // Error early if invalid
         if cmp.dist_bbox(self.root.bounds())? != T::zero() {
             return Err(Error::OutOfBounds);
@@ -143,7 +161,7 @@ where
                 // the bbox is expensive to calculate then the distance likely
                 // is also.
                 let bbox = child
-                    .geometry()
+                    .as_geom()
                     .bounding_rect()
                     .ok_or(Error::CannotMakeBbox)?;
 
@@ -151,7 +169,7 @@ where
                     continue;
                 }
 
-                let child_dist = cmp.dist_geom(&child.geometry())?;
+                let child_dist = cmp.dist_geom(&child.as_geom())?;
                 // See notes in point about <= usage
                 if child_dist <= min_dist {
                     min_dist = child_dist;
@@ -172,22 +190,22 @@ where
 
     fn knn_r<X>(&self, cmp: &X, k: usize, r: T) -> Result<Vec<(&D, T)>, Error>
     where
-        X: Distance<T>,
+        X: AsGeom<T>,
     {
-        knn(&self.root, cmp, k, r)
+        knn(&self.root, cmp.with_calc(self.calc_method()), k, r)
     }
 
-    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, Self::Node, D, X, T>
+    fn sorted<'a, X>(&'a self, cmp: &'a X) -> SortIter<'a, Self::Node, D, T>
     where
-        X: Distance<T>,
+        X: AsGeom<T> + 'a,
     {
-        sorted(&self.root, cmp)
+        sorted(&self.root, cmp.with_calc(self.calc_method()))
     }
 }
 
 impl<'a, D, T> IntoIterator for &'a BoundsQuadTree<D, T>
 where
-    D: Datum<T>,
+    D: AsGeom<T>,
     T: GeoNum,
 {
     type Item = &'a D;
@@ -200,7 +218,7 @@ where
 
 impl<D, T> std::fmt::Display for BoundsQuadTree<D, T>
 where
-    D: Datum<T>,
+    D: AsGeom<T>,
     T: GeoNum + std::fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -224,7 +242,7 @@ mod tests {
     fn retrieve_grabs_all_in_overlapping_bounds() {
         let origin = Point::new(0.0, 0.0);
         let bounds = Rect::new(origin.0, coord! {x: 8.0, y: 8.0});
-        let mut qt = BoundsQuadTree::new(bounds, 2, 2);
+        let mut qt = BoundsQuadTree::new(bounds, CalcMethod::Euclidean, 2, 2);
 
         // In root[TL][TL]
         let b1 = b(1.0, 1.0, 0.0, 0.0);

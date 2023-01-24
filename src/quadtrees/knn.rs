@@ -1,5 +1,3 @@
-use geo::GeoFloat;
-
 use crate::*;
 
 /// Private, general, knn function implementation that takes an explcit node
@@ -11,17 +9,16 @@ use crate::*;
 ///
 /// This could be implemented in terms of the `sorted` function with
 /// `take_while`, but here we have more aggressive error semantics.
-pub(crate) fn knn<'a, D, N, X, T>(
+pub(crate) fn knn<'a, D, N, T>(
     root: &'a N,
-    cmp: &X,
+    cmp: GeomCalc<'_, T>,
     k: usize,
     r: T,
 ) -> Result<Vec<(&'a D, T)>, Error>
 where
     N: Node<D, T>,
-    D: Datum<T>,
-    X: Distance<T>,
-    T: GeoFloat,
+    D: AsGeom<T>,
+    T: QtFloat,
 {
     // Error early on invalid inputs
     let root_d = cmp.dist_bbox(root.bounds())?;
@@ -69,7 +66,7 @@ where
             }
 
             for child in node.children() {
-                let d = cmp.dist_geom(&child.geometry())?;
+                let d = cmp.dist_geom(&child.as_geom())?;
 
                 if !d.is_finite() {
                     return Err(Error::InvalidDistance);

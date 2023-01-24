@@ -1,9 +1,11 @@
-use geo::{coord, EuclideanDistance, GeoFloat, Rect};
+use geo::{coord, EuclideanDistance, Rect};
+
+use crate::geom::QtFloat;
 
 /// Calculate the euclidean distance between two [`Rect`]'s.
 pub fn dist_rect_rect<T>(r1: &Rect<T>, r2: &Rect<T>) -> T
 where
-    T: GeoFloat,
+    T: QtFloat,
 {
     let overlap_x = r1.max().x >= r2.min().x && r2.max().x >= r1.min().x;
     let overlap_y = r1.max().y >= r2.min().y && r2.max().y >= r1.min().y;

@@ -1,30 +1,26 @@
-use geo::GeoFloat;
-
 use crate::*;
 
 /// Iterator to output QuadTree data in distance-sorted order.
 ///
 /// Due to the additional requirement for supporting arbitrary test types, this
 /// is not unifed with [`DatumIter`].
-pub struct SortIter<'a, N, D, X, T>
+pub struct SortIter<'a, N, D, T>
 where
     N: Node<D, T>,
-    D: Datum<T>,
-    X: Distance<T>,
-    T: GeoFloat,
+    D: AsGeom<T>,
+    T: QtFloat,
 {
     // We work on a tuple of a node/child enum and its distance to the comparator
     stack: Vec<(NodeType<'a, N, D, T>, T)>,
-    cmp: &'a X,
+    cmp: GeomCalc<'a, T>,
     is_sorted: bool,
 }
 
-impl<'a, N, D, X, T> Iterator for SortIter<'a, N, D, X, T>
+impl<'a, N, D, T> Iterator for SortIter<'a, N, D, T>
 where
     N: Node<D, T>,
-    D: Datum<T>,
-    X: Distance<T>,
-    T: GeoFloat,
+    D: AsGeom<T>,
+    T: QtFloat,
 {
     type Item = (&'a D, T);
 
@@ -54,7 +50,7 @@ where
                 for child in node.children() {
                     if let Some(d) = self
                         .cmp
-                        .dist_geom(&child.geometry())
+                        .dist_geom(&child.as_geom())
                         .ok()
                         .and_then(|d| d.is_finite().then_some(d))
                     {
@@ -92,12 +88,11 @@ where
 /// QT implementations can simply delegate to this function.
 /// Note that unlike find and knn, this method tries to not error, skipping over
 /// items it cannot process.
-pub(crate) fn sorted<'a, D, N, X, T>(root: &'a N, cmp: &'a X) -> SortIter<'a, N, D, X, T>
+pub(crate) fn sorted<'a, D, N, T>(root: &'a N, cmp: GeomCalc<'a, T>) -> SortIter<'a, N, D, T>
 where
     N: Node<D, T>,
-    D: Datum<T>,
-    X: Distance<T>,
-    T: GeoFloat,
+    D: AsGeom<T>,
+    T: QtFloat,
 {
     // Simply return an empty iterator if the bbox is out of bounds or the
     // distance calc fails

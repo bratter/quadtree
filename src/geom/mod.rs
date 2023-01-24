@@ -1,67 +1,144 @@
-use geo::{GeoNum, Point, Rect};
-
-use crate::{Error, Geometry};
-
 // Module declarations
 pub mod euclidean;
 pub mod geometry;
+pub mod math;
 pub mod spherical;
 
-/// Trait implemented by the geometry wrapper types which provides polymorphism
-/// for distance calculations. The implementors should generally forward the
-/// call to an appropriate underlying distance calculation, for example that
-/// provided by the [`geo::EuclideanDistance`] trait.
-///
-/// This trait should not need to be used outside the crate, as the only place
-/// it is necessary is in the wrapper types. However any consumer can implement
-/// custom distance calcs on any type they wish, so is still part of the public
-/// API.
-pub trait Distance<T>
-where
-    T: GeoNum,
-{
-    /// Calculate the distance between an allowed Geometry and the test type
-    /// implementing this trait.
-    fn dist_geom(&self, geom: &Geometry<T>) -> Result<T, Error>;
+use geo::{GeoFloat, GeoNum, Line, LineString, Point, Polygon, Rect};
+use num_traits::{FloatConst, Signed};
+use rstar::RTreeNum;
 
-    /// Calculate the distance between a [`Rect`] and the test type
-    /// implementing this trait.
-    fn dist_bbox(&self, bbox: &Rect<T>) -> Result<T, Error>;
+pub use euclidean::dist::DistEuclidean;
+pub(crate) use math::*;
+pub use spherical::dist::DistHaversine;
+
+use crate::{Error, GeometryRef};
+
+/// Wrapper trait to simplfy bounds for distance calculations. Comes implmented for `f64` and `f32`
+/// native types.
+pub trait QtFloat: GeoFloat + Signed + FloatConst + RTreeNum {}
+
+impl QtFloat for f32 {}
+impl QtFloat for f64 {}
+
+/// Set of valid calculation methods with which to instantiate a QuadTree implementation. This set
+/// of flags, which is merged with [`GeomCalc`] in the QuadTrees drives the selection of the
+/// distance algorithm.
+///
+/// The following options are avilable:
+/// - **None:** A null operator that errors all possible distance calcs.
+/// - **Euclidean:** Uses standard planar euclidean geometry.
+/// - **Spherical:** Uses the haversine formula for great circle distances (useful for geographic
+///   applications)
+///
+/// Euclidean will always output distances in the same units as the inputs, whereas Spherical
+/// requires radian inputs and always produces radian outputs. To get distances in length units,
+/// multiply by the sphere's diameter.
+#[derive(Debug, Clone, Copy)]
+pub enum CalcMethod {
+    None,
+    Euclidean,
+    Spherical,
 }
 
-/// Determine whether a [`Point`] in contained within or sits on the boundary of
-/// a [`Rect`].
-///
-/// We cannot use Rect::contains for this purpose because the
-/// [DE-9IM semantics](https://en.wikipedia.org/wiki/DE-9IM) that geo-rust uses
-/// does not return true when the `Point` site on the boundary of the `Rect`.
-/// However this i still valid for most QuadTree operations.
-///
-/// Note that even 0-sized `Rect` shapes on the boundary of a quadtree will be
-/// contained by another `Rect`, so this is not required for bounds-bounds
-/// calculations.
-pub fn pt_in_rect<T>(rect: &Rect<T>, pt: &Point<T>) -> bool
+/// Struct that applies a specific distance algorithm to the reference. Provides `dist_geom` and
+/// `dist_bbox` methods to calculate distances between an arbitrary geometry and a rectangular
+/// bounding box respectively.
+pub struct GeomCalc<'a, T>
 where
     T: GeoNum,
 {
-    let (x, y) = pt.x_y();
-    let (x1, y1) = rect.min().x_y();
-    let (x2, y2) = rect.max().x_y();
-
-    x >= x1 && x <= x2 && y >= y1 && y <= y2
+    geom: GeometryRef<'a, T>,
+    method: CalcMethod,
 }
 
-/// Determine whether the first rectangle `r1` contains or has on its border,
-/// in degenerate cases, `r2`.
+impl<T> GeomCalc<'_, T>
+where
+    T: QtFloat,
+{
+    /// Calculate the distance between the contained geometry and another arbitrary geometry `geom`
+    /// useing the coordinate system contained in the [`GeomCalc`] struct.
+    pub fn dist_geom(&self, geom: &GeometryRef<T>) -> Result<T, crate::Error> {
+        match self.method {
+            CalcMethod::None => Err(Error::CalcMethodNotSet),
+            CalcMethod::Euclidean => Ok(self.geom.dist_euclidean(geom)),
+            CalcMethod::Spherical => self.geom.dist_haversine(geom),
+        }
+    }
+
+    /// Calculate the distance between the contained geometry and the passed [`Rect`] bounding box
+    /// using the coordinate system contained in the [`GeomCalc`] struct.
+    pub fn dist_bbox(&self, bbox: &Rect<T>) -> Result<T, crate::Error> {
+        match self.method {
+            CalcMethod::None => Err(Error::CalcMethodNotSet),
+            CalcMethod::Euclidean => Ok(bbox.dist_euclidean(&self.geom)),
+            CalcMethod::Spherical => bbox.dist_haversine(&self.geom),
+        }
+    }
+}
+
+/// The main constraint for QuadTree input data. Both inserted items and test comparators must
+/// implement [`AsGeom`] to be used in any [`QuadTree`] implementation. It provides a methos that
+/// converts an arbitrary geometry, or any custom type containing some form of geometry into a
+/// [`GeometryRef`], enabling polymorphic distance calculations in the quadtree.
 ///
-/// Currently this mirrors the behavior of contains for rects in geo-rust, but
-/// this appears to be erroneous behavior, so we will not rely on it here.
-pub fn rect_in_rect<T>(r1: &Rect<T>, r2: &Rect<T>) -> bool
+/// the trait comes pre-implemented on a variety of geo-types (see [`GeometryRef`] for a list, plus
+/// [`Geometry`] and [`GeometryRef`] enums, allowing them to be used directly as data or
+/// comparators.
+pub trait AsGeom<T>
 where
     T: GeoNum,
 {
-    r1.min().x <= r2.min().x
-        && r1.max().x >= r2.max().x
-        && r1.min().y <= r2.min().y
-        && r1.max().y >= r2.max().y
+    /// Convert this geometry/datum to a [`GeometryRef`]. This is used in QuadTree implementations
+    /// to provide poymorphic distance calculations.
+    fn as_geom(&self) -> GeometryRef<T>;
+
+    fn with_calc(&self, method: CalcMethod) -> GeomCalc<'_, T> {
+        self.as_geom().into_calc(method)
+    }
+}
+
+impl<T> AsGeom<T> for Point<T>
+where
+    T: GeoNum,
+{
+    fn as_geom(&self) -> GeometryRef<T> {
+        GeometryRef::Point(self)
+    }
+}
+
+impl<T> AsGeom<T> for Line<T>
+where
+    T: GeoNum,
+{
+    fn as_geom(&self) -> GeometryRef<T> {
+        GeometryRef::Line(self)
+    }
+}
+
+impl<T> AsGeom<T> for LineString<T>
+where
+    T: GeoNum,
+{
+    fn as_geom(&self) -> GeometryRef<T> {
+        GeometryRef::LineString(self)
+    }
+}
+
+impl<T> AsGeom<T> for Polygon<T>
+where
+    T: GeoNum,
+{
+    fn as_geom(&self) -> GeometryRef<T> {
+        GeometryRef::Polygon(self)
+    }
+}
+
+impl<T> AsGeom<T> for Rect<T>
+where
+    T: GeoNum,
+{
+    fn as_geom(&self) -> GeometryRef<T> {
+        GeometryRef::Rect(self)
+    }
 }

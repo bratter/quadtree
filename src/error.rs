@@ -10,4 +10,5 @@ pub enum Error {
     InvalidDistance,
     Empty,
     CannotCastInfinity,
+    CalcMethodNotSet,
 }

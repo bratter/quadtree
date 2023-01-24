@@ -8,7 +8,7 @@ use geo::{BoundingRect, Coordinate, GeoNum, Intersects, Rect};
 #[derive(Debug)]
 pub struct BoundsNode<D, T>
 where
-    D: Datum<T>,
+    D: AsGeom<T>,
     T: GeoNum,
 {
     bounds: Rect<T>,
@@ -23,7 +23,7 @@ where
 
 impl<D, T> Node<D, T> for BoundsNode<D, T>
 where
-    D: Datum<T>,
+    D: AsGeom<T>,
     T: GeoNum,
 {
     fn new(bounds: Rect<T>, depth: u8, max_depth: u8, max_children: usize) -> Self {
@@ -40,7 +40,7 @@ where
     }
 
     fn datum_position(datum: &D) -> Option<Coordinate<T>> {
-        let bbox = datum.geometry().bounding_rect()?;
+        let bbox = datum.as_geom().bounding_rect()?;
         let (x, y) = bbox.min().x_y();
         let two = T::one() + T::one();
 
@@ -88,7 +88,7 @@ where
             Some(mut sub_nodes) => {
                 // Generate the bounding box for the geometry, which may fail
                 let bbox = datum
-                    .geometry()
+                    .as_geom()
                     .bounding_rect()
                     .ok_or(Error::CannotMakeBbox)?;
 
@@ -137,7 +137,7 @@ where
             .nodes
             .as_ref()
             .zip(self.find_sub_node(datum))
-            .zip(datum.geometry().bounding_rect())
+            .zip(datum.as_geom().bounding_rect())
         {
             let sub_node = &nodes[sn_index as usize];
             if rect_in_rect(sub_node.bounds(), &bbox) {
@@ -166,7 +166,7 @@ where
 
 impl<D, T> Display for BoundsNode<D, T>
 where
-    D: Datum<T>,
+    D: AsGeom<T>,
     T: GeoNum + Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
