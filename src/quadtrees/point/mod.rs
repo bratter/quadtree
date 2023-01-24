@@ -1,23 +1,58 @@
-mod datum;
 mod node;
-
-pub use self::datum::PointDatum;
 
 use super::knn::knn;
 use super::sorted::{sorted, SortIter};
 use crate::*;
-use geo::{GeoNum, Rect};
+use geo::{Coordinate, GeoNum, Point, Rect};
 use node::PointNode;
+
+/// Trait required for an item to be useable in a [`crate::PointQuadTree`].
+/// It simply requires that the item can produce a [`Point`] for comparisons.
+///
+/// This trait comes implemented for [`Coordinate`] and [`Point`], so
+/// coords and points can be used in quadtrees directly.
+///
+/// We only constrain by [`GeoNum`] here as floats are not required if we are not
+/// using distance-based search methods.
+///
+/// We do not provide implementations for non-point shapes. It is up for the
+/// user to decide how to generate a point from a polygon, etc. if they wish to
+/// use them as points.
+pub trait AsPoint<T = f64>
+where
+    T: GeoNum,
+{
+    fn as_point(&self) -> Point<T>;
+}
+
+// We turn a Point into a datum so it can be used in the qt directly
+impl<T> AsPoint<T> for Coordinate<T>
+where
+    T: GeoNum,
+{
+    fn as_point(&self) -> Point<T> {
+        Point::from(*self)
+    }
+}
+
+impl<T> AsPoint<T> for Point<T>
+where
+    T: GeoNum,
+{
+    fn as_point(&self) -> Point<T> {
+        *self
+    }
+}
 
 /// A [`QuadTree`] implementation for point-like geometries.
 ///
-/// This implementation requires the datum be a [`PointDatum`], which enables
-/// conversion of the datum to a [`geo::Point`]. [`PointDatum`] comes
+/// This implementation requires the datum be a [`AsPoint`], which enables
+/// conversion of the datum to a [`geo::Point`]. [`AsPoint`] comes
 /// pre-implemented for [`geo::Point`] and [`geo::Coordinate`], but not for
 /// other geo-types, as there is no single way to convert non-point geometries
 /// to a point.
 ///
-/// Users can implement [`PointDatum`] on any custom type they wish to use as
+/// Users can implement [`AsPoint`] on any custom type they wish to use as
 /// a datum.
 ///
 /// Note that [`AsGeom`] is also required on datum in order to access the [`QuadTreeSearch`]
@@ -25,7 +60,7 @@ use node::PointNode;
 #[derive(Debug)]
 pub struct PointQuadTree<D, T>
 where
-    D: PointDatum<T>,
+    D: AsPoint<T>,
     T: GeoNum,
 {
     root: PointNode<D, T>,
@@ -39,7 +74,7 @@ where
 
 impl<D, T> PointQuadTree<D, T>
 where
-    D: PointDatum<T>,
+    D: AsPoint<T>,
     T: GeoNum,
 {
     /// Create a new Point QuadTree.
@@ -78,7 +113,7 @@ where
 
 impl<D, T> QuadTree<D, T> for PointQuadTree<D, T>
 where
-    D: PointDatum<T>,
+    D: AsPoint<T>,
     T: GeoNum,
 {
     type Node = PointNode<D, T>;
@@ -89,7 +124,7 @@ where
 
     fn insert(&mut self, pt: D) -> Result<(), Error> {
         // Cannot use Rect::contains here, see notes on pt_in_rect for why
-        if pt_in_rect(&self.root.bounds(), &pt.point()) {
+        if pt_in_rect(&self.root.bounds(), &pt.as_point()) {
             self.root.insert(pt)?;
             self.size += 1;
             Ok(())
@@ -102,7 +137,7 @@ where
         // Bounds check first - capturing out of bounds here
         // This trusts the Node implementation to act correctly
         // Cannot use Rect::contains here, see notes on pt_in_rect for why
-        if pt_in_rect(&self.root.bounds(), &pt.point()) {
+        if pt_in_rect(&self.root.bounds(), &pt.as_point()) {
             self.root.retrieve(pt)
         } else {
             DatumIter::Empty
@@ -112,7 +147,7 @@ where
 
 impl<D, T> QuadTreeSearch<D, T> for PointQuadTree<D, T>
 where
-    D: AsGeom<T> + PointDatum<T>,
+    D: AsGeom<T> + AsPoint<T>,
     T: QtFloat,
 {
     type Node = PointNode<D, T>;
@@ -191,7 +226,7 @@ where
 
 impl<'a, D, T> IntoIterator for &'a PointQuadTree<D, T>
 where
-    D: PointDatum<T>,
+    D: AsPoint<T>,
     T: GeoNum,
 {
     type Item = &'a D;
@@ -204,7 +239,7 @@ where
 
 impl<D, T> std::fmt::Display for PointQuadTree<D, T>
 where
-    D: PointDatum<T>,
+    D: AsPoint<T>,
     T: GeoNum + std::fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -223,8 +258,8 @@ mod tests {
     #[derive(Debug, Clone, Copy, PartialEq)]
     struct MyData(f64, f64);
 
-    impl PointDatum for MyData {
-        fn point(&self) -> Point {
+    impl AsPoint for MyData {
+        fn as_point(&self) -> Point {
             Point::new(self.0, self.1)
         }
     }

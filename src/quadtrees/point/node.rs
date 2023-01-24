@@ -4,13 +4,11 @@ use std::marker::PhantomData;
 use crate::*;
 use geo::{Coordinate, GeoNum, Rect};
 
-use super::datum::PointDatum;
-
 /// [`Node`] implementation for [`PointQuadTree`].
 #[derive(Debug)]
 pub struct PointNode<D, T>
 where
-    D: PointDatum<T>,
+    D: AsPoint<T>,
     T: GeoNum,
 {
     bounds: Rect<T>,
@@ -24,7 +22,7 @@ where
 
 impl<D, T> Node<D, T> for PointNode<D, T>
 where
-    D: PointDatum<T>,
+    D: AsPoint<T>,
     T: GeoNum,
 {
     fn new(bounds: Rect<T>, depth: u8, max_depth: u8, max_children: usize) -> Self {
@@ -40,7 +38,7 @@ where
     }
 
     fn datum_position(datum: &D) -> Option<Coordinate<T>> {
-        Some(datum.point().0)
+        Some(datum.as_point().0)
     }
 
     // Getters
@@ -130,7 +128,7 @@ where
 
 impl<D, T> Display for PointNode<D, T>
 where
-    D: PointDatum<T>,
+    D: AsPoint<T>,
     T: GeoNum + Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

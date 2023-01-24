@@ -17,7 +17,7 @@ fn r(x1: f64, y1: f64, x2: f64, y2: f64) -> Rect {
 #[test]
 fn euclidean_point_example() {
     // Set up an arbitrary datum type to work in the quadtree by implementing
-    // PointDatum. In many cases this will be a trivial passthrough to an
+    // AsPoint. In many cases this will be a trivial passthrough to an
     // underlying geo type, but could be more complex if required.
     // Only need Clone and PartialEq for testing ergonomics, its not a
     // requirement of the qt
@@ -28,8 +28,8 @@ fn euclidean_point_example() {
         location: Point,
     }
 
-    impl PointDatum for MyDatum {
-        fn point(&self) -> Point<f64> {
+    impl AsPoint for MyDatum {
+        fn as_point(&self) -> Point {
             self.location
         }
     }
