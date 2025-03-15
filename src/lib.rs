@@ -32,7 +32,6 @@ pub use quadtrees::*;
 
 // Export geometry items
 pub use geom::euclidean;
-pub use geom::euclidean::*;
 pub use geom::geometry::*;
 pub use geom::spherical;
 pub use geom::spherical::to_radians::*;

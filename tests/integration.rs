@@ -1,5 +1,5 @@
 use approx::assert_abs_diff_eq;
-use geo::{coord, EuclideanDistance, Line, Point, Rect};
+use geo::{Distance, Euclidean, Line, Point, Rect, coord};
 use quadtree::spherical::math::dist_pt_pt;
 use quadtree::*;
 
@@ -158,7 +158,7 @@ fn find_returns_closest_in_euclidean_for_segments_in_bounds_qt() {
 
     // Closer to the diagonal
     let cmp = Point::new(0.1, 0.2);
-    let cmp_dist = Point::new(0.1, 0.2).euclidean_distance(&line(0.3, 0.0, 0.0, 0.4));
+    let cmp_dist = Euclidean::distance(&Point::new(0.1, 0.2), &line(0.3, 0.0, 0.0, 0.4));
     let (datum, dist) = qt.find(&cmp).unwrap();
     assert_abs_diff_eq!(dist, cmp_dist);
     assert_eq!(datum, &d1);

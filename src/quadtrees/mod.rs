@@ -4,10 +4,10 @@ pub mod point;
 mod sorted;
 
 use crate::{
+    AsGeom, Error,
     geom::{CalcMethod, QtFloat},
     iter::DatumIter,
     node::Node,
-    AsGeom, Error,
 };
 use geo::GeoNum;
 

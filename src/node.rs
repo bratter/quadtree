@@ -1,10 +1,10 @@
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
-use geo::{coord, Coord, GeoNum, Rect};
+use geo::{Coord, GeoNum, Rect, coord};
 
-use crate::iter::{DatumIter, DescendantIter};
 use crate::Error;
+use crate::iter::{DatumIter, DescendantIter};
 
 /// Sub-node indicies.
 ///

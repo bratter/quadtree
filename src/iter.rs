@@ -1,4 +1,4 @@
-use std::iter::{empty, Chain};
+use std::iter::{Chain, empty};
 use std::marker::PhantomData;
 use std::slice::Iter;
 

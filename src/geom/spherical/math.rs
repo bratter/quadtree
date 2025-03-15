@@ -1,4 +1,4 @@
-use geo::{coord, GeoFloat, Intersects, Line, LineString, Point, Polygon, Rect};
+use geo::{GeoFloat, Intersects, Line, LineString, Point, Polygon, Rect, coord};
 use std::f64::consts::PI;
 use std::ops::{Add, Sub};
 
@@ -236,11 +236,7 @@ where
             let d1 = (r1.min().y - r2.max().y).abs();
             let d2 = (r2.min().y - r1.max().y).abs();
 
-            if d1 < d2 {
-                d1
-            } else {
-                d2
-            }
+            if d1 < d2 { d1 } else { d2 }
         }
         // If y (lat) overlaps, then find the point of overlap with the
         // maximum abs value of lat (closest to the poles) and calc

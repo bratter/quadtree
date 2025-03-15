@@ -1,7 +1,7 @@
-use geo::{EuclideanDistance, Line, LineString, Point, Polygon, Rect};
+use geo::{Distance, Euclidean, Line, LineString, Point, Polygon, Rect};
 
 use super::math::dist_rect_rect;
-use crate::{geom::QtFloat, AsGeom, Geometry, GeometryRef};
+use crate::{AsGeom, Geometry, GeometryRef, geom::QtFloat};
 
 /// Trait applied to all valid geometries to calculate the Euclidean distance
 /// between geometries.
@@ -21,11 +21,11 @@ where
 {
     fn dist_euclidean(&self, rhs: &GeometryRef<T>) -> T {
         match rhs {
-            GeometryRef::Point(d) => d.euclidean_distance(self),
-            GeometryRef::Line(d) => d.euclidean_distance(self),
-            GeometryRef::LineString(d) => d.euclidean_distance(self),
-            GeometryRef::Polygon(d) => d.euclidean_distance(self),
-            GeometryRef::Rect(d) => self.euclidean_distance(&d.to_polygon()),
+            &GeometryRef::Point(d) => Euclidean::distance(self, d),
+            &GeometryRef::Line(d) => Euclidean::distance(self, d),
+            &GeometryRef::LineString(d) => Euclidean::distance(self, d),
+            &GeometryRef::Polygon(d) => Euclidean::distance(self, d),
+            &GeometryRef::Rect(d) => Euclidean::distance(self, &d.to_polygon()),
         }
     }
 }
@@ -45,11 +45,11 @@ where
 {
     fn dist_euclidean(&self, rhs: &GeometryRef<T>) -> T {
         match rhs {
-            GeometryRef::Point(d) => d.euclidean_distance(self),
-            GeometryRef::Line(d) => d.euclidean_distance(self),
-            GeometryRef::LineString(d) => d.euclidean_distance(self),
-            GeometryRef::Polygon(d) => d.euclidean_distance(self),
-            GeometryRef::Rect(d) => self.euclidean_distance(&d.to_polygon()),
+            &GeometryRef::Point(d) => Euclidean::distance(self, d),
+            &GeometryRef::Line(d) => Euclidean::distance(self, d),
+            &GeometryRef::LineString(d) => Euclidean::distance(self, d),
+            &GeometryRef::Polygon(d) => Euclidean::distance(self, d),
+            &GeometryRef::Rect(d) => Euclidean::distance(self, &d.to_polygon()),
         }
     }
 }
@@ -69,11 +69,11 @@ where
 {
     fn dist_euclidean(&self, rhs: &GeometryRef<T>) -> T {
         match rhs {
-            GeometryRef::Point(d) => d.euclidean_distance(self),
-            GeometryRef::Line(d) => d.euclidean_distance(self),
-            GeometryRef::LineString(d) => d.euclidean_distance(self),
-            GeometryRef::Polygon(d) => d.euclidean_distance(self),
-            GeometryRef::Rect(d) => self.euclidean_distance(&d.to_polygon()),
+            &GeometryRef::Point(d) => Euclidean::distance(self, d),
+            &GeometryRef::Line(d) => Euclidean::distance(self, d),
+            &GeometryRef::LineString(d) => Euclidean::distance(self, d),
+            &GeometryRef::Polygon(d) => Euclidean::distance(self, d),
+            &GeometryRef::Rect(d) => Euclidean::distance(self, &d.to_polygon()),
         }
     }
 }
@@ -93,11 +93,11 @@ where
 {
     fn dist_euclidean(&self, rhs: &GeometryRef<T>) -> T {
         match rhs {
-            GeometryRef::Point(d) => d.euclidean_distance(self),
-            GeometryRef::Line(d) => d.euclidean_distance(self),
-            GeometryRef::LineString(d) => d.euclidean_distance(self),
-            GeometryRef::Polygon(d) => d.euclidean_distance(self),
-            GeometryRef::Rect(d) => self.euclidean_distance(&d.to_polygon()),
+            &GeometryRef::Point(d) => Euclidean::distance(self, d),
+            &GeometryRef::Line(d) => Euclidean::distance(self, d),
+            &GeometryRef::LineString(d) => Euclidean::distance(self, d),
+            &GeometryRef::Polygon(d) => Euclidean::distance(self, d),
+            &GeometryRef::Rect(d) => Euclidean::distance(self, &d.to_polygon()),
         }
     }
 }
@@ -117,11 +117,11 @@ where
 {
     fn dist_euclidean(&self, rhs: &GeometryRef<T>) -> T {
         match rhs {
-            GeometryRef::Point(d) => d.euclidean_distance(&self.to_polygon()),
-            GeometryRef::Line(d) => d.euclidean_distance(&self.to_polygon()),
-            GeometryRef::LineString(d) => d.euclidean_distance(&self.to_polygon()),
-            GeometryRef::Polygon(d) => d.euclidean_distance(&self.to_polygon()),
-            GeometryRef::Rect(d) => dist_rect_rect(self, d),
+            &GeometryRef::Point(d) => Euclidean::distance(&self.to_polygon(), d),
+            &GeometryRef::Line(d) => Euclidean::distance(&self.to_polygon(), d),
+            &GeometryRef::LineString(d) => Euclidean::distance(&self.to_polygon(), d),
+            &GeometryRef::Polygon(d) => Euclidean::distance(&self.to_polygon(), d),
+            &GeometryRef::Rect(d) => dist_rect_rect(self, d),
         }
     }
 }

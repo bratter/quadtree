@@ -2,7 +2,7 @@
 // on the various quadtree implementations
 
 use approx::assert_abs_diff_eq;
-use geo::{coord, Point, Rect};
+use geo::{Point, Rect, coord};
 use quadtree::*;
 
 // Some helper functions to make geo shapes

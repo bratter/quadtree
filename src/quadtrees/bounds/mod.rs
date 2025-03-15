@@ -5,7 +5,7 @@ use std::vec;
 
 use super::{
     knn::knn,
-    sorted::{sorted, SortIter},
+    sorted::{SortIter, sorted},
 };
 use crate::*;
 use node::*;
@@ -230,7 +230,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use geo::{coord, Point, Rect};
+    use geo::{Point, Rect, coord};
 
     // helper function for bounds datum creation
     fn b(x: f64, y: f64, w: f64, h: f64) -> Rect {

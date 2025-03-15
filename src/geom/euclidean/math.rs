@@ -1,4 +1,4 @@
-use geo::{coord, EuclideanDistance, Rect};
+use geo::{Distance, Euclidean, Rect, coord};
 
 use crate::geom::QtFloat;
 
@@ -30,7 +30,7 @@ where
                 (r1.min().y, r2.max().y)
             };
 
-            coord!(x: x1, y: y1).euclidean_distance(&coord!(x: x2, y: y2))
+            Euclidean::distance(coord!(x: x1, y: y1), coord!(x: x2, y: y2))
         }
     }
 }

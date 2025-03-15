@@ -1,7 +1,7 @@
 mod node;
 
 use super::knn::knn;
-use super::sorted::{sorted, SortIter};
+use super::sorted::{SortIter, sorted};
 use crate::*;
 use geo::{Coord, GeoNum, Point, Rect};
 use node::PointNode;
@@ -250,7 +250,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use geo::{coord, Point};
+    use geo::{Point, coord};
 
     use super::*;
 

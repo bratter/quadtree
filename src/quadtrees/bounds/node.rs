@@ -133,29 +133,32 @@ where
         // Process all three functions that produce options in one hit
         // Descendants overall will produce an iterator of children in all nodes
         // that intersect with the passed node
-        let descendants = if let Some(((nodes, sn_index), bbox)) = self
+        let descendants = match self
             .nodes
             .as_ref()
             .zip(self.find_sub_node(datum))
             .zip(datum.as_geom().bounding_rect())
         {
-            let sub_node = &nodes[sn_index as usize];
-            if rect_in_rect(sub_node.bounds(), &bbox) {
-                sub_node.retrieve(datum)
-            } else {
-                let mut inner = DatumIter::Empty;
-                // Return the entire contents of any overlapping node
-                // Same semantics as https://github.com/mikechambers/ExamplesByMesh/blob/master/JavaScript/QuadTree/src/QuadTree.js
-                for sub_node in &**nodes {
-                    if sub_node.bounds().intersects(&bbox) {
-                        inner =
-                            DatumIter::ChainSelf(ChainSelfIter::new(inner, sub_node.descendants()));
+            Some(((nodes, sn_index), bbox)) => {
+                let sub_node = &nodes[sn_index as usize];
+                if rect_in_rect(sub_node.bounds(), &bbox) {
+                    sub_node.retrieve(datum)
+                } else {
+                    let mut inner = DatumIter::Empty;
+                    // Return the entire contents of any overlapping node
+                    // Same semantics as https://github.com/mikechambers/ExamplesByMesh/blob/master/JavaScript/QuadTree/src/QuadTree.js
+                    for sub_node in &**nodes {
+                        if sub_node.bounds().intersects(&bbox) {
+                            inner = DatumIter::ChainSelf(ChainSelfIter::new(
+                                inner,
+                                sub_node.descendants(),
+                            ));
+                        }
                     }
+                    inner
                 }
-                inner
             }
-        } else {
-            DatumIter::Empty
+            _ => DatumIter::Empty,
         };
 
         // Start with the immediate children, which may include stuck children
