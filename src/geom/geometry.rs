@@ -1,5 +1,7 @@
 use geo::{BoundingRect, GeoNum, Line, LineString, Point, Polygon, Rect};
 
+use crate::Error;
+
 use super::{AsGeom, CalcMethod, GeomCalc};
 
 //
@@ -158,5 +160,23 @@ where
 {
     fn from(d: Rect<T>) -> Self {
         Geometry::Rect(d)
+    }
+}
+
+impl<T> TryFrom<geo::Geometry<T>> for Geometry<T>
+where
+    T: GeoNum,
+{
+    type Error = Error;
+
+    fn try_from(value: geo::Geometry<T>) -> Result<Self, Error> {
+        match value {
+            geo::Geometry::Point(point) => Ok(point.into()),
+            geo::Geometry::Line(line) => Ok(line.into()),
+            geo::Geometry::LineString(line_string) => Ok(line_string.into()),
+            geo::Geometry::Polygon(polygon) => Ok(polygon.into()),
+            geo::Geometry::Rect(rect) => Ok(rect.into()),
+            _ => Err(Error::UnsupportedGeometry),
+        }
     }
 }
